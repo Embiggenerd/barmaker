@@ -1,0 +1,29 @@
+// JavaScript
+<html>
+  <body>
+    <div
+      draggable="true"
+      ondrag="myFunction(event)"
+      ondrop="dropFunction(event)"
+      style="width: 100px; height: 100px; background-color: red"
+    ></div>
+    <script>
+      //   document.addEventListener(
+      //     "dragover",
+      //     function (e) {
+      //       e = e || window.event;
+      //       var dragX = e.pageX,
+      //         dragY = e.pageY;
+
+      //       console.log("X: " + dragX + " Y: " + dragY);
+      //     },
+      //     false
+      //   );
+      function myFunction(e) {
+        var dragX = e.pageX,
+          dragY = e.pageY;
+        console.log("X: " + dragX + " Y: " + dragY);
+      }
+    </script>
+  </body>
+</html>
