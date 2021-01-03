@@ -1,29 +1,210 @@
-// JavaScript
-<html>
-  <body>
-    <div
-      draggable="true"
-      ondrag="myFunction(event)"
-      ondrop="dropFunction(event)"
-      style="width: 100px; height: 100px; background-color: red"
-    ></div>
-    <script>
-      //   document.addEventListener(
-      //     "dragover",
-      //     function (e) {
-      //       e = e || window.event;
-      //       var dragX = e.pageX,
-      //         dragY = e.pageY;
-
-      //       console.log("X: " + dragX + " Y: " + dragY);
-      //     },
-      //     false
-      //   );
-      function myFunction(e) {
-        var dragX = e.pageX,
-          dragY = e.pageY;
-        console.log("X: " + dragX + " Y: " + dragY);
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>resize</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * {
+        box-sizing: border-box;
+        padding: 0;
       }
+      .divider {
+        background-color: black;
+        cursor: ew-resize;
+        height: 100%;
+        width: 2px;
+        z-index: 1000;
+        cursor: ew-resize;
+        height: 100px;
+        width: 2px;
+        /* position: absolute; */
+      }
+
+      .segment {
+        min-width: 1px;
+      }
+    </style>
+  </head>
+  <body class="font-sans w-full">
+    <div style="border: black solid 1px; display: flex; position: relative">
+      <div
+        style="
+          background: yellow;
+          width: 33.3333333333%;
+          display: flex;
+          height: 100px;
+        "
+      >
+        Left
+      </div>
+      <div class="resizer"></div>
+      <div
+        style="
+          background: pink;
+          width: 33.33333333%;
+          display: flex;
+          height: 100px;
+        "
+      >
+        Right
+      </div>
+      <div class="resizer"></div>
+      <div
+        style="
+          background: rgb(109, 220, 240);
+          width: 33.333333333%;
+          display: flex;
+          height: 100px;
+        "
+      >
+        RightRight
+      </div>
+    </div>
+
+    <script>
+      class BarMaker {
+        constructor(initialState) {
+          initBar(initialState);
+        }
+
+        initBar(initialState) {
+          if (!initialState.segments || initialState.segements.length === 0) {
+            initialState = {
+              dividers: [this.createDivider()],
+              segments: [],
+            };
+          }
+        }
+
+
+        createDivider(left = null, right = null, width) { return {left, right, width} };
+
+        createSegement (
+          left = null,
+          right = null,
+          color = null,
+          width = null
+        ){ return {
+          left, right, color, width
+        }};
+      }
+
+      const
+      const state = {
+        dividers: [
+          { left: null, right: null },
+          { left: null, right: null },
+        ],
+        segments: [
+          { color: "yellow", width: "33.333333333%", left: null, right: null },
+          { color: "pink", width: "33.333333333%" },
+          { color: "rgb(109, 220, 240)", width: "33.333333333%" },
+        ],
+      };
+      document.addEventListener("DOMContentLoaded", function () {
+        // Query the element
+        let resizer = null;
+        let leftSide = null;
+        let rightSide = null;
+
+        // The current position of mouse
+        let x = 0;
+        let y = 0;
+        let leftWidth = 0;
+        let rightWidth = 0;
+        let initialwidth = null;
+
+        // Handle the mousedown event
+        // that's triggered when user drags the resizer
+        const mouseDownHandler = function (e) {
+          resizer = e.target;
+          leftSide = resizer.previousElementSibling;
+          rightSide = resizer.nextElementSibling;
+          // Get the current mouse position
+          x = e.clientX;
+          y = e.clientY;
+          leftWidth = leftSide.getBoundingClientRect().width;
+          rightWidth = rightSide.getBoundingClientRect().width;
+
+          // console.log("mousedown sides", rightSide, leftSide);
+          // console.log("mousedown target", e.target);
+
+          // Attach the listeners to `document`
+          document.addEventListener("mousemove", mouseMoveHandler);
+          document.addEventListener("mouseup", mouseUpHandler);
+        };
+
+        const mouseMoveHandler = function (e) {
+          // How far the mouse has been moved
+          const dx = e.clientX - x;
+          // console.log('dxxx', e.clientX, x, dx)
+          const newLeftWidth =
+            ((leftWidth + dx) * 100) /
+            resizer.parentNode.getBoundingClientRect().width;
+          leftSide.style.width = `${newLeftWidth}%`;
+
+          const newRightWidth =
+            ((rightWidth - dx + 2) * 100) / // +2 because of width of resizers
+            resizer.parentNode.getBoundingClientRect().width;
+          rightSide.style.width = `${newRightWidth}%`;
+
+          if (rightSide.getBoundingClientRect().width <= 5) {
+            // initialwidth && (initialwidth = leftWidth )
+            // console.log("*******************");
+
+            const rightOfRight =
+              rightSide.nextElementSibling.nextElementSibling;
+            const rightRightWidth = rightOfRight.getBoundingClientRect().width;
+
+            const newRightRightWidth =
+              ((rightRightWidth - dx + 2) * 100) / // +2 because of width of resizers
+              resizer.parentNode.getBoundingClientRect().width;
+            console.log("rightRightWidth, dx", rightRightWidth, dx);
+            rightOfRight.style.width = `${newRightRightWidth}%`;
+          }
+
+          // console.log(
+          //   "mousemove new widths",
+          //   // leftSide.style.width,
+          //   rightSide.getBoundingClientRect().width
+          // );
+
+          resizer.style.cursor = "col-resize";
+          document.body.style.cursor = "col-resize";
+
+          leftSide.style.userSelect = "none";
+          leftSide.style.pointerEvents = "none";
+
+          rightSide.style.userSelect = "none";
+          rightSide.style.pointerEvents = "none";
+
+          // console.log("mousedown", x, y, leftWidth);
+        };
+
+        const mouseUpHandler = function () {
+          resizer.style.removeProperty("cursor");
+          document.body.style.removeProperty("cursor");
+
+          leftSide.style.removeProperty("user-select");
+          leftSide.style.removeProperty("pointer-events");
+
+          rightSide.style.removeProperty("user-select");
+          rightSide.style.removeProperty("pointer-events");
+
+          // Remove the handlers of `mousemove` and `mouseup`
+          document.removeEventListener("mousemove", mouseMoveHandler);
+          document.removeEventListener("mouseup", mouseUpHandler);
+        };
+
+        // Attach the handler
+        const resizers = document.querySelectorAll(".resizer");
+        // console.log("resizers", resizers);
+
+        for (resizer of resizers) {
+          // console.log("resizer", resizer);
+          resizer.addEventListener("mousedown", mouseDownHandler);
+        }
+      });
     </script>
   </body>
 </html>
