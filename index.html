@@ -9,11 +9,53 @@
       box-sizing: border-box;
       padding: 0;
     }
+    .toolTip {
+      width:100px;
+      height:150px;
+      font-size: 1em;
+      line-height: 1.5;
+      margin: 0;
+      list-style: none;
+      box-sizing: border-box;
+      position: absolute;
+      background: #fff;
+      color: #333333;
+      border-radius: 3px;
+      transition: all .1s ease;
+      pointer-events: none;
+      transform: translate(-50%, 0);
+      box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.1);
+      padding: 10px 10px 8px;
+      text-align: center;
+      opacity: 1;
+      left: 368.88px;
+      top: 16.646px;
+      display: none;
+    }
+
+    .toolTip:after {
+      content: '';
+      display: block;
+      width: 0;
+      height: 0;
+      position: absolute;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 10px solid #fff;
+      left: calc(50% - 10px);
+      bottom: -9px;
+    }
+    
   </style>
 </head>
+<body style="position:relative">
+  <div class="tooltip" id="toolTip" style="opacity: 1; left: 368.88px; top: 16.646px;">
+    <div class="tooltip-value">645</div>
+    <div class="tooltip-level fair">fair</div>
+    <div class="tooltip-date">20 Feb, 2020</div>
+  </div>
 
-<body class="font-sans w-full">
-  <div id="bar-parent">
+  <div style="margin-top:300px;" id="bar-parent"></div>
   </div>
 
   <script>
@@ -25,6 +67,7 @@
         this.mouseDownHandler = this.mouseDownHandler.bind(this)
         this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
+        this.onClickHandler = this.onClickHandler.bind(this)
         this.initBar(initialState);
       }
 
@@ -121,8 +164,15 @@
 
       onClickHandler(e) {
         e.preventDefault()
-        const mouseLocation = e.clientX
-        console.log({mouseLocation})
+        const toolTip = document.querySelector('#toolTip')
+        this.bar.appendChild(toolTip)
+        console.log('this.toolTip top',toolTip.getBoundingClientRect().height)
+        console.log('toolTip.style.height', toolTip.style)
+        const location = {x:e.clientX,y: this.bar.getBoundingClientRect().top}
+        toolTip.style.left = `${location.x}px`
+        toolTip.style.top = `-150px`
+        toolTip.style.display = "block"
+        console.log({location})
 
       }
 
