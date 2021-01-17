@@ -29,33 +29,7 @@
 </head>
 
 <body class="font-sans w-full">
-  <div style="border: black solid 1px; display: flex; position: relative" id="bar-parent">
-    <!-- <div style="
-          background: yellow;
-          width: 33.3333333333%;
-          display: flex;
-          height: 100px;
-        ">
-      Left
-    </div>
-    <div class="resizer"></div>
-    <div style="
-          background: pink;
-          width: 33.33333333%;
-          display: flex;
-          height: 100px;
-        ">
-      Right
-    </div>
-    <div class="resizer"></div>
-    <div style="
-          background: rgb(109, 220, 240);
-          width: 33.333333333%;
-          display: flex;
-          height: 100px;
-        ">
-      RightRight
-    </div> -->
+  <div style="display: flex; position: relative;" id="bar-parent">
   </div>
 
   <script>
@@ -81,7 +55,8 @@
               height: "100px",
               innerText: "left",
               left: null,
-              right: null
+              right: null,
+              element: null
             },
             {
               backgroundColor: "pink",
@@ -90,7 +65,8 @@
               height: "100px",
               innerText: "middle",
               left: null,
-              right: null
+              right: null,
+              element: null
             },
             {
               backgroundColor: "rgb(109, 220, 240)",
@@ -99,7 +75,8 @@
               height: "100px",
               innerText: "right",
               left: null,
-              right: null
+              right: null,
+              element: null
             }
           ]
         }
@@ -126,12 +103,23 @@
             const dividerDiv = document.createElement('div')
             dividerDiv.style.backgroundColor = "black"
             // dividerDiv.style.height = "100%"
-            dividerDiv.style.width = "2px"
-            dividerDiv.style.cursor = "ew-resize";
+            dividerDiv.style.width = "0"
+            dividerDiv.style.position = "relative"
+            const dividerChild = document.createElement('div')
+            dividerChild.style.position='absolute'
+            dividerChild.style.left = "-1px"
+            dividerChild.style.width = "2px"
+            dividerChild.style.backgroundColor = "black"
+            dividerChild.style.height = this.parent.getBoundingClientRect().height
+            dividerDiv.appendChild(dividerChild)
+            // dividerDiv.style.marginLeft= "-1px"
+            // dividerDiv.style.marginRight= "-1px"
+
+            dividerChild.style.cursor = "ew-resize";
             dividerDiv.left = this.state.segments[i]
             this.state.segments[i].right = dividerDiv
             segmentDiv.insertAdjacentElement("afterend", dividerDiv)
-            dividerDiv.addEventListener("mousedown", this.mouseDownHandler)
+            dividerChild.addEventListener("mousedown", this.mouseDownHandler)
           }
 
           // If not first segment, reference the right divider of last segment,
@@ -145,13 +133,19 @@
         }
       }
 
+      onClickHandler(e) {
+        const mouseLocation = e.clientX
+
+      }
+
       mouseDownHandler(e) {
-        this.selectedDivider = e.target;
-        // leftSide = resizer.previousElementSibling;
-        // rightSide = resizer.nextElementSibling;
+        e.preventDefault()
+        this.selectedDivider = e.target.parentNode;
+
         // Get the current mouse position
         this.x = e.clientX;
         this.y = e.clientY;
+        console.log('this.selectedDivider', this.selectedDivider)
         this.leftWidth = this.selectedDivider.left.element.getBoundingClientRect().width;
         this.rightWidth = this.selectedDivider.right.element.getBoundingClientRect().width;
 
@@ -162,11 +156,7 @@
         this.selectedDivider.left.element.style.pointerEvents = "none";
 
         this.selectedDivider.right.element.style.userSelect = "none";
-        this.selectedDivider.right.element.style.pointerEvents = "none";
-
-        // console.log("mousedown sides", rightSide, leftSide);
-        // console.log("mousedown target", e.target);
-
+      
         // Attach the listeners to `document`
         document.addEventListener("mousemove", this.mouseMoveHandler);
         document.addEventListener("mouseup", this.mouseUpHandler);
@@ -174,21 +164,17 @@
       };
 
       mouseMoveHandler(e) {
-        console.log('this.selectedDivider.left before', this.selectedDivider.left.width, this.parent.getBoundingClientRect().width)
-
         // How far the mouse has been moved
         const dx = e.clientX - this.x;
         // console.log('mouse moved', dx)
-        console.log('dxxx', e.clientX, this.x, dx)
         const newLeftWidth =
           ((this.leftWidth + dx) * 100) /
           this.parent.getBoundingClientRect().width;
         this.selectedDivider.left.element.style.width = `${newLeftWidth}%`;
         this.selectedDivider.left.width = newLeftWidth
-        console.log('this.selectedDivider.left after', newLeftWidth, this.selectedDivider.left.width, this.parent.getBoundingClientRect().width)
 
         const newRightWidth =
-          ((this.rightWidth - dx + 2) * 100) / // +2 because of width of dividers
+          ((this.rightWidth - dx) * 100) / // +2 because of width of dividers
           this.parent.getBoundingClientRect().width;
         this.selectedDivider.right.element.style.width = `${newRightWidth}%`;
         this.selectedDivider.right.width = newRightWidth
@@ -196,7 +182,6 @@
 
       mouseUpHandler() {
         console.log('mouse up')
-        // this.selectedDivider.style.removeProperty("cursor");
         document.body.style.removeProperty("cursor");
 
         // this.selectedDivider.left.element.style.removeProperty("user-select");
@@ -216,132 +201,29 @@
         // rightSide.style.removeProperty("pointer-events");
 
         // Remove the handlers of `mousemove` and `mouseup`
+        
+
+        this.leftWidth = 0
+        this.rightWidth = 0
+
+        this.selectedDivider = null
+
         document.removeEventListener("mousemove", this.mouseMoveHandler);
         document.removeEventListener("mouseup", this.mouseUpHandler);
 
-        this.selectedDivider = null
+        let totalWidthPercent = 0
+        let totalWidthPixels = 0
+        this.state.segments.forEach(seg => {
+          // console.log('getBound',seg.element.getBoundingClientRect().width)
+          // console.log('style.width', parseFloat(seg.element.style.width))
+          totalWidthPixels += seg.element.getBoundingClientRect().width
+          totalWidthPercent += parseFloat(seg.element.style.width)
+        })
+        console.log({
+          totalWidthPercent,
+          widthPixelsDiff: this.parent.getBoundingClientRect().width - totalWidthPixels
+        })
       };
-
-      // if (rightSide.getBoundingClientRect().width <= 5) {
-      //   // initialwidth && (initialwidth = leftWidth )
-      //   // console.log("*******************");
-
-      //   const rightOfRight =
-      //     rightSide.nextElementSibling.nextElementSibling;
-      //   const rightRightWidth = rightOfRight.getBoundingClientRect().width;
-
-      //   const newRightRightWidth =
-      //     ((rightRightWidth - dx + 2) * 100) / // +2 because of width of resizers
-      //     resizer.parentNode.getBoundingClientRect().width;
-      //   console.log("rightRightWidth, dx", rightRightWidth, dx);
-      //   rightOfRight.style.width = `${newRightRightWidth}%`;
-      // }
-
-      initListeners() {
-        // Query the element
-        let resizer = null;
-        let leftSide = null;
-        let rightSide = null;
-
-        // The current position of mouse
-        let x = 0;
-        let y = 0;
-        let leftWidth = 0;
-        let rightWidth = 0;
-        let initialwidth = null;
-
-        // Handle the mousedown event
-        // that's triggered when user drags the resizer
-        // const mouseDownHandler = function (e) {
-        //   resizer = e.target;
-        //   leftSide = resizer.previousElementSibling;
-        //   rightSide = resizer.nextElementSibling;
-        //   // Get the current mouse position
-        //   x = e.clientX;
-        //   y = e.clientY;
-        //   leftWidth = leftSide.getBoundingClientRect().width;
-        //   rightWidth = rightSide.getBoundingClientRect().width;
-
-        //   // console.log("mousedown sides", rightSide, leftSide);
-        //   // console.log("mousedown target", e.target);
-
-        //   // Attach the listeners to `document`
-        //   document.addEventListener("mousemove", mouseMoveHandler);
-        //   document.addEventListener("mouseup", mouseUpHandler);
-        // };
-
-        // const mouseMoveHandler = function (e) {
-        //   // How far the mouse has been moved
-        //   const dx = e.clientX - x;
-        //   // console.log('dxxx', e.clientX, x, dx)
-        //   const newLeftWidth =
-        //     ((leftWidth + dx) * 100) /
-        //     resizer.parentNode.getBoundingClientRect().width;
-        //   leftSide.style.width = `${newLeftWidth}%`;
-
-        //   const newRightWidth =
-        //     ((rightWidth - dx + 2) * 100) / // +2 because of width of resizers
-        //     resizer.parentNode.getBoundingClientRect().width;
-        //   rightSide.style.width = `${newRightWidth}%`;
-
-        //   if (rightSide.getBoundingClientRect().width <= 5) {
-        //     // initialwidth && (initialwidth = leftWidth )
-        //     // console.log("*******************");
-
-        //     const rightOfRight =
-        //       rightSide.nextElementSibling.nextElementSibling;
-        //     const rightRightWidth = rightOfRight.getBoundingClientRect().width;
-
-        //     const newRightRightWidth =
-        //       ((rightRightWidth - dx + 2) * 100) / // +2 because of width of resizers
-        //       resizer.parentNode.getBoundingClientRect().width;
-        //     console.log("rightRightWidth, dx", rightRightWidth, dx);
-        //     rightOfRight.style.width = `${newRightRightWidth}%`;
-        //   }
-
-        // console.log(
-        //   "mousemove new widths",
-        //   // leftSide.style.width,
-        //   rightSide.getBoundingClientRect().width
-        // );
-
-        // resizer.style.cursor = "col-resize";
-        // document.body.style.cursor = "col-resize";
-
-        // leftSide.style.userSelect = "none";
-        // leftSide.style.pointerEvents = "none";
-
-        // rightSide.style.userSelect = "none";
-        // rightSide.style.pointerEvents = "none";
-
-        // console.log("mousedown", x, y, leftWidth);
-        // };
-
-        // const mouseUpHandler = function () {
-        //   resizer.style.removeProperty("cursor");
-        //   document.body.style.removeProperty("cursor");
-
-        //   leftSide.style.removeProperty("user-select");
-        //   leftSide.style.removeProperty("pointer-events");
-
-        //   rightSide.style.removeProperty("user-select");
-        //   rightSide.style.removeProperty("pointer-events");
-
-        //   // Remove the handlers of `mousemove` and `mouseup`
-        //   document.removeEventListener("mousemove", mouseMoveHandler);
-        //   document.removeEventListener("mouseup", mouseUpHandler);
-        // };
-
-        // // Attach the handler
-        // const resizers = document.querySelectorAll(".resizer");
-        // // console.log("resizers", resizers);
-
-        // for (resizer of resizers) {
-        //   // console.log("resizer", resizer);
-        //   resizer.addEventListener("mousedown", mouseDownHandler);
-        // }
-      }
-
 
       createDivider(left = null, right = null) { return { left, right } };
 
@@ -356,123 +238,8 @@
         }
       };
     }
-    // const state = {
-    //   dividers: [
-    //     { left: null, right: null },
-    //     { left: null, right: null },
-    //   ],
-    //   segments: [
-    //     { color: "yellow", width: "33.333333333%", left: null, right: null },
-    //     { color: "pink", width: "33.333333333%" },
-    //     { color: "rgb(109, 220, 240)", width: "33.333333333%" },
-    //   ],
-    // };
-
     const bar = new BarMaker()
-    // document.addEventListener("DOMContentLoaded", function () {
-    //   // Query the element
-    //   let resizer = null;
-    //   let leftSide = null;
-    //   let rightSide = null;
 
-    //   // The current position of mouse
-    //   let x = 0;
-    //   let y = 0;
-    //   let leftWidth = 0;
-    //   let rightWidth = 0;
-    //   let initialwidth = null;
-
-    //   // Handle the mousedown event
-    //   // that's triggered when user drags the resizer
-    //   const mouseDownHandler = function (e) {
-    //     resizer = e.target;
-    //     leftSide = resizer.previousElementSibling;
-    //     rightSide = resizer.nextElementSibling;
-    //     // Get the current mouse position
-    //     x = e.clientX;
-    //     y = e.clientY;
-    //     leftWidth = leftSide.getBoundingClientRect().width;
-    //     rightWidth = rightSide.getBoundingClientRect().width;
-
-    //     // console.log("mousedown sides", rightSide, leftSide);
-    //     // console.log("mousedown target", e.target);
-
-    //     // Attach the listeners to `document`
-    //     document.addEventListener("mousemove", mouseMoveHandler);
-    //     document.addEventListener("mouseup", mouseUpHandler);
-    //   };
-
-    //   const mouseMoveHandler = function (e) {
-    //     // How far the mouse has been moved
-    //     const dx = e.clientX - x;
-    //     // console.log('dxxx', e.clientX, x, dx)
-    //     const newLeftWidth =
-    //       ((leftWidth + dx) * 100) /
-    //       resizer.parentNode.getBoundingClientRect().width;
-    //     leftSide.style.width = `${newLeftWidth}%`;
-
-    //     const newRightWidth =
-    //       ((rightWidth - dx + 2) * 100) / // +2 because of width of resizers
-    //       resizer.parentNode.getBoundingClientRect().width;
-    //     rightSide.style.width = `${newRightWidth}%`;
-
-    //     if (rightSide.getBoundingClientRect().width <= 5) {
-    //       // initialwidth && (initialwidth = leftWidth )
-    //       // console.log("*******************");
-
-    //       const rightOfRight =
-    //         rightSide.nextElementSibling.nextElementSibling;
-    //       const rightRightWidth = rightOfRight.getBoundingClientRect().width;
-
-    //       const newRightRightWidth =
-    //         ((rightRightWidth - dx + 2) * 100) / // +2 because of width of resizers
-    //         resizer.parentNode.getBoundingClientRect().width;
-    //       console.log("rightRightWidth, dx", rightRightWidth, dx);
-    //       rightOfRight.style.width = `${newRightRightWidth}%`;
-    //     }
-
-    //     // console.log(
-    //     //   "mousemove new widths",
-    //     //   // leftSide.style.width,
-    //     //   rightSide.getBoundingClientRect().width
-    //     // );
-
-    //     resizer.style.cursor = "col-resize";
-    //     document.body.style.cursor = "col-resize";
-
-    //     leftSide.style.userSelect = "none";
-    //     leftSide.style.pointerEvents = "none";
-
-    //     rightSide.style.userSelect = "none";
-    //     rightSide.style.pointerEvents = "none";
-
-    //     // console.log("mousedown", x, y, leftWidth);
-    //   };
-
-    //   const mouseUpHandler = function () {
-    //     resizer.style.removeProperty("cursor");
-    //     document.body.style.removeProperty("cursor");
-
-    //     leftSide.style.removeProperty("user-select");
-    //     leftSide.style.removeProperty("pointer-events");
-
-    //     rightSide.style.removeProperty("user-select");
-    //     rightSide.style.removeProperty("pointer-events");
-
-    //     // Remove the handlers of `mousemove` and `mouseup`
-    //     document.removeEventListener("mousemove", mouseMoveHandler);
-    //     document.removeEventListener("mouseup", mouseUpHandler);
-    //   };
-
-    //   // Attach the handler
-    //   const resizers = document.querySelectorAll(".resizer");
-    //   // console.log("resizers", resizers);
-
-    //   for (resizer of resizers) {
-    //     // console.log("resizer", resizer);
-    //     resizer.addEventListener("mousedown", mouseDownHandler);
-    //   }
-    // });
   </script>
 </body>
 
