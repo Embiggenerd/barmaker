@@ -9,27 +9,11 @@
       box-sizing: border-box;
       padding: 0;
     }
-
-    .divider {
-      background-color: black;
-      cursor: ew-resize;
-      height: 100%;
-      width: 2px;
-      z-index: 1000;
-      cursor: ew-resize;
-      height: 100px;
-      width: 2px;
-      /* position: absolute; */
-    }
-
-    .segment {
-      min-width: 1px;
-    }
   </style>
 </head>
 
 <body class="font-sans w-full">
-  <div style="display: flex; position: relative;" id="bar-parent">
+  <div id="bar-parent">
   </div>
 
   <script>
@@ -86,6 +70,9 @@
         this.state = initialState
 
         this.parent = document.querySelector(`#${this.state.parentID}`)
+        this.bar = document.createElement('div')
+        this.bar.style.display = "flex"
+        this.bar.style.height = "100px"
         for (let i = 0; i < this.state.segments.length; i++) {
           const segmentDiv = document.createElement("div")
           const { backgroundColor, width, display, height, innerText } = this.state.segments[i]
@@ -94,7 +81,8 @@
           segmentDiv.style.height = height
           segmentDiv.style.display = display
           segmentDiv.innerText = innerText
-          this.parent.appendChild(segmentDiv)
+          segmentDiv.addEventListener('click', this.onClickHandler)
+          this.bar.appendChild(segmentDiv)
           this.state.segments[i].element = segmentDiv
 
           // If not the last segment, create divider, attach it as segment.right, make 
@@ -110,11 +98,8 @@
             dividerChild.style.left = "-1px"
             dividerChild.style.width = "2px"
             dividerChild.style.backgroundColor = "black"
-            dividerChild.style.height = this.parent.getBoundingClientRect().height
+            dividerChild.style.height = this.bar.style.height
             dividerDiv.appendChild(dividerChild)
-            // dividerDiv.style.marginLeft= "-1px"
-            // dividerDiv.style.marginRight= "-1px"
-
             dividerChild.style.cursor = "ew-resize";
             dividerDiv.left = this.state.segments[i]
             this.state.segments[i].right = dividerDiv
@@ -131,10 +116,13 @@
           }
           console.log('this.state.segments[i]', this.state.segments[i])
         }
+        this.parent.appendChild(this.bar)
       }
 
       onClickHandler(e) {
+        e.preventDefault()
         const mouseLocation = e.clientX
+        console.log({mouseLocation})
 
       }
 
@@ -144,7 +132,6 @@
 
         // Get the current mouse position
         this.x = e.clientX;
-        this.y = e.clientY;
         console.log('this.selectedDivider', this.selectedDivider)
         this.leftWidth = this.selectedDivider.left.element.getBoundingClientRect().width;
         this.rightWidth = this.selectedDivider.right.element.getBoundingClientRect().width;
@@ -153,7 +140,7 @@
         document.body.style.cursor = "ew-resize";
 
         this.selectedDivider.left.element.style.userSelect = "none";
-        this.selectedDivider.left.element.style.pointerEvents = "none";
+        // this.selectedDivider.left.element.style.pointerEvents = "none"; // removed onclickhanlder
 
         this.selectedDivider.right.element.style.userSelect = "none";
       
@@ -164,6 +151,7 @@
       };
 
       mouseMoveHandler(e) {
+        e.preventDefault()
         // How far the mouse has been moved
         const dx = e.clientX - this.x;
         // console.log('mouse moved', dx)
@@ -181,7 +169,6 @@
       }
 
       mouseUpHandler() {
-        console.log('mouse up')
         document.body.style.removeProperty("cursor");
 
         // this.selectedDivider.left.element.style.removeProperty("user-select");
@@ -214,8 +201,6 @@
         let totalWidthPercent = 0
         let totalWidthPixels = 0
         this.state.segments.forEach(seg => {
-          // console.log('getBound',seg.element.getBoundingClientRect().width)
-          // console.log('style.width', parseFloat(seg.element.style.width))
           totalWidthPixels += seg.element.getBoundingClientRect().width
           totalWidthPercent += parseFloat(seg.element.style.width)
         })
