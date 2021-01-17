@@ -9,9 +9,10 @@
       box-sizing: border-box;
       padding: 0;
     }
+
     .toolTip {
-      width:100px;
-      height:150px;
+      width: 100px;
+      height: 150px;
       font-size: 1em;
       line-height: 1.5;
       margin: 0;
@@ -45,14 +46,13 @@
       left: calc(50% - 10px);
       bottom: -9px;
     }
-    
   </style>
 </head>
+
 <body style="position:relative">
 
-  <div style="margin-top:300px;" id="bar-parent"></div>
   <div class="tooltip" id="toolTip" style="opacity: 1; left: 368.88px; top: 16.646px;">
-    <form >
+    <form>
       <label for="text">Text:</label><br>
       <input type="text" id="text" name="text" value=""><br>
       <label for="color">Color:</label><br>
@@ -60,11 +60,25 @@
       <input type="submit">
     </form>
   </div>
+  <div style="margin-top:300px;" id="bar-parent"></div>
+
   </div>
 
   <script>
     class BarMaker {
       constructor(initialState) {
+        this.state = {
+          segments: [],
+          toolTip: {
+            form: {
+              state: "edit",
+              elemenet: null,
+              colorInput: null,
+              textInput: null,
+            },
+            element: null
+          }
+        }
         this.selectedDivider = null
         this.leftWidth = 0
         this.rightWidth = 0
@@ -114,17 +128,23 @@
         if (!initialState.parentID) {
           initialState.parentID = "bar-parent"
         }
-        this.state = initialState
+        this.state = { ...this.state, ...initialState }
 
         this.parent = document.querySelector(`#${this.state.parentID}`)
         this.bar = document.createElement('div')
         this.bar.style.display = "flex"
         this.bar.style.height = "100px"
         this.drawBar()
+        this.initToolTip()
         this.parent.appendChild(this.bar)
       }
 
-      drawBar(){
+      initToolTip(){
+        this.state.toolTip.element = document.querySelector('#toolTip')
+        this.bar.appendChild(this.state.toolTip.element)
+      }
+
+      drawBar() {
         for (let i = 0; i < this.state.segments.length; i++) {
           const segmentDiv = document.createElement("div")
           const { backgroundColor, width, display, height, innerText } = this.state.segments[i]
@@ -146,7 +166,7 @@
             dividerDiv.style.width = "0"
             dividerDiv.style.position = "relative"
             const dividerChild = document.createElement('div')
-            dividerChild.style.position='absolute'
+            dividerChild.style.position = 'absolute'
             dividerChild.style.left = "-1px"
             dividerChild.style.width = "2px"
             dividerChild.style.backgroundColor = "black"
@@ -172,31 +192,41 @@
 
       onClickHandler(e) {
         e.preventDefault()
-        this.toolTip = document.querySelector('#toolTip')
-        // this.bar.appendChild(toolTip)
-        const location = {x:e.clientX,y: this.bar.getBoundingClientRect().top}
-        this.toolTip.style.left = `${location.x}px`
-        this.toolTip.style.top = `-150px`
-        this.toolTip.style.display = "block"
-
+        console.log('this.state', this.state)
+        // Draw toolTip
+        const location = { x: e.clientX, y: this.bar.getBoundingClientRect().top }
+        this.state.toolTip.element.style.left = `${location.x}px`
+        this.state.toolTip.element.style.top = `-150px`
+        this.state.toolTip.element.style.display = "block"
+        // Set which segment we clicked on
         this.selectedSeg = this.state.segments.find(s => {
           return s.element === e.target
         })
-        this.textInput = document.querySelector('input#text')
-        this.textInput.value = this.selectedSeg.innerText
-        this.colorInput = document.querySelector('input#color')
-        this.colorInput.value = this.selectedSeg.backgroundColor
-        this.form = document.querySelector('.toolTip form')
-        this.form.addEventListener('submit', this.handleFormSubmit)
+        // Hydrate form
+        this.state.toolTip.form.textInput = document.querySelector('input#text')
+        this.state.toolTip.form.textInput.value = this.selectedSeg.innerText
+        this.state.toolTip.form.colorInput = document.querySelector('input#color')
+        this.state.toolTip.form.colorInput.value = this.selectedSeg.backgroundColor
+        this.state.toolTip.form.element = document.querySelector('.toolTip form')
+        this.state.toolTip.form.element.addEventListener('submit', this.handleFormSubmit)
       }
 
-      handleFormSubmit(e){
+      handleFormSubmit(e) {
         e.preventDefault()
-        this.selectedSeg.backgroundColor = this.colorInput.value
-        this.selectedSeg.innerText = this.textInput.value
-        this.bar.innerHTML = ""
+        this.selectedSeg.backgroundColor = this.state.toolTip.form.colorInput.value
+        this.selectedSeg.innerText = this.state.toolTip.form.textInput.value
+        this.clearBar()
         this.drawBar()
-        this.toolTip.style.display = "none"
+        this.state.toolTip.element.style.display = "none"
+      }
+
+      clearBar(){
+        if(this.state.segments.length !== 0){
+          this.state.segments.forEach(seg =>{
+            seg.element.remove()
+            seg.right && seg.right.remove()
+          })
+        }
       }
 
       mouseDownHandler(e) {
@@ -216,11 +246,10 @@
         // this.selectedDivider.left.element.style.pointerEvents = "none"; // removed onclickhanlder
 
         this.selectedDivider.right.element.style.userSelect = "none";
-      
+
         // Attach the listeners to `document`
         document.addEventListener("mousemove", this.mouseMoveHandler);
         document.addEventListener("mouseup", this.mouseUpHandler);
-        console.log('mouseDown', this.mouseUpHandler)
       };
 
       mouseMoveHandler(e) {
@@ -261,7 +290,7 @@
         // rightSide.style.removeProperty("pointer-events");
 
         // Remove the handlers of `mousemove` and `mouseup`
-        
+
 
         this.leftWidth = 0
         this.rightWidth = 0
