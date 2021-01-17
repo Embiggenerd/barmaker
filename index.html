@@ -72,7 +72,7 @@
           toolTip: {
             form: {
               state: "edit",
-              elemenet: null,
+              element: null,
               colorInput: null,
               textInput: null,
             },
@@ -141,6 +141,8 @@
 
       initToolTip(){
         this.state.toolTip.element = document.querySelector('#toolTip')
+        this.state.toolTip.form.element = document.querySelector('.toolTip form')
+        this.state.toolTip.form.element.addEventListener('submit', this.handleFormSubmit)
         this.bar.appendChild(this.state.toolTip.element)
       }
 
@@ -207,8 +209,6 @@
         this.state.toolTip.form.textInput.value = this.selectedSeg.innerText
         this.state.toolTip.form.colorInput = document.querySelector('input#color')
         this.state.toolTip.form.colorInput.value = this.selectedSeg.backgroundColor
-        this.state.toolTip.form.element = document.querySelector('.toolTip form')
-        this.state.toolTip.form.element.addEventListener('submit', this.handleFormSubmit)
       }
 
       handleFormSubmit(e) {
