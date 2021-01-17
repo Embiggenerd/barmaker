@@ -22,7 +22,7 @@
       color: #333333;
       border-radius: 3px;
       transition: all .1s ease;
-      pointer-events: none;
+      /* pointer-events: none; */
       transform: translate(-50%, 0);
       box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.1);
       padding: 10px 10px 8px;
@@ -49,13 +49,17 @@
   </style>
 </head>
 <body style="position:relative">
-  <div class="tooltip" id="toolTip" style="opacity: 1; left: 368.88px; top: 16.646px;">
-    <div class="tooltip-value">645</div>
-    <div class="tooltip-level fair">fair</div>
-    <div class="tooltip-date">20 Feb, 2020</div>
-  </div>
 
   <div style="margin-top:300px;" id="bar-parent"></div>
+  <div class="tooltip" id="toolTip" style="opacity: 1; left: 368.88px; top: 16.646px;">
+    <form >
+      <label for="text">Text:</label><br>
+      <input type="text" id="text" name="text" value=""><br>
+      <label for="color">Color:</label><br>
+      <input type="text" id="color" name="color" value="">
+      <input type="submit">
+    </form>
+  </div>
   </div>
 
   <script>
@@ -68,11 +72,11 @@
         this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
         this.onClickHandler = this.onClickHandler.bind(this)
+        this.handleFormSubmit = this.handleFormSubmit.bind(this)
         this.initBar(initialState);
       }
 
       initBar(initialState = {}) {
-        // console.log('init', this.mouseUpHandler, this.mouseMoveHandler)
         if (!initialState.segments || initialState.segements.length === 0) {
           initialState.segments = [
             {
@@ -116,6 +120,11 @@
         this.bar = document.createElement('div')
         this.bar.style.display = "flex"
         this.bar.style.height = "100px"
+        this.drawBar()
+        this.parent.appendChild(this.bar)
+      }
+
+      drawBar(){
         for (let i = 0; i < this.state.segments.length; i++) {
           const segmentDiv = document.createElement("div")
           const { backgroundColor, width, display, height, innerText } = this.state.segments[i]
@@ -159,21 +168,35 @@
           }
           console.log('this.state.segments[i]', this.state.segments[i])
         }
-        this.parent.appendChild(this.bar)
       }
 
       onClickHandler(e) {
         e.preventDefault()
-        const toolTip = document.querySelector('#toolTip')
-        this.bar.appendChild(toolTip)
-        console.log('this.toolTip top',toolTip.getBoundingClientRect().height)
-        console.log('toolTip.style.height', toolTip.style)
+        this.toolTip = document.querySelector('#toolTip')
+        // this.bar.appendChild(toolTip)
         const location = {x:e.clientX,y: this.bar.getBoundingClientRect().top}
-        toolTip.style.left = `${location.x}px`
-        toolTip.style.top = `-150px`
-        toolTip.style.display = "block"
-        console.log({location})
+        this.toolTip.style.left = `${location.x}px`
+        this.toolTip.style.top = `-150px`
+        this.toolTip.style.display = "block"
 
+        this.selectedSeg = this.state.segments.find(s => {
+          return s.element === e.target
+        })
+        this.textInput = document.querySelector('input#text')
+        this.textInput.value = this.selectedSeg.innerText
+        this.colorInput = document.querySelector('input#color')
+        this.colorInput.value = this.selectedSeg.backgroundColor
+        this.form = document.querySelector('.toolTip form')
+        this.form.addEventListener('submit', this.handleFormSubmit)
+      }
+
+      handleFormSubmit(e){
+        e.preventDefault()
+        this.selectedSeg.backgroundColor = this.colorInput.value
+        this.selectedSeg.innerText = this.textInput.value
+        this.bar.innerHTML = ""
+        this.drawBar()
+        this.toolTip.style.display = "none"
       }
 
       mouseDownHandler(e) {
