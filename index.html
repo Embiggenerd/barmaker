@@ -46,12 +46,24 @@
       left: calc(50% - 10px);
       bottom: -9px;
     }
+
+    .removeButton {
+      height: 25px;
+      width: 25px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .closeToolTipButton {
+      color: red
+    }
   </style>
 </head>
 
 <body style="position:relative">
 
   <div class="tooltip" id="toolTip" style="opacity: 1; left: 368.88px; top: 16.646px;">
+   <p class="closeToolTipButton">X</p>
     <form>
       <label for="text">Text:</label><br>
       <input type="text" id="text" name="text" value=""><br>
@@ -59,6 +71,8 @@
       <input type="text" id="color" name="color" value="">
       <input type="submit">
     </form>
+
+    <button class="removeButton">-</button>
   </div>
   <div style="margin-top:300px;" id="bar-parent"></div>
 
@@ -75,9 +89,12 @@
               element: null,
               colorInput: null,
               textInput: null,
+              removeButton: null,
+              closeToolTipButton: null
             },
             element: null
-          }
+          },
+          parentID: ""
         }
         this.selectedDivider = null
         this.leftWidth = 0
@@ -87,6 +104,7 @@
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
         this.onClickHandler = this.onClickHandler.bind(this)
         this.handleFormSubmit = this.handleFormSubmit.bind(this)
+        this.removeClickHandler = this.removeClickHandler.bind(this)
         this.initBar(initialState);
       }
 
@@ -139,11 +157,14 @@
         this.parent.appendChild(this.bar)
       }
 
-      initToolTip(){
+      initToolTip() {
         this.state.toolTip.element = document.querySelector('#toolTip')
         this.state.toolTip.form.element = document.querySelector('.toolTip form')
         this.state.toolTip.form.element.addEventListener('submit', this.handleFormSubmit)
-        this.bar.appendChild(this.state.toolTip.element)
+        this.state.toolTip.removeButton = document.querySelector('.removeButton')
+        this.state.toolTip.removeButton.addEventListener('click', this.removeClickHandler)
+        this.state.toolTip.closeToolTipButton = document.querySelector('.closeToolTipButton')
+        this.state.toolTip.closeToolTipButton.addEventListener('click', () => this.state.toolTip.element.style.display = "none")
       }
 
       drawBar() {
@@ -164,9 +185,11 @@
           if (i !== this.state.segments.length - 1) {
             const dividerDiv = document.createElement('div')
             dividerDiv.style.backgroundColor = "black"
-            // dividerDiv.style.height = "100%"
             dividerDiv.style.width = "0"
             dividerDiv.style.position = "relative"
+            // The divider is a parent div with 0 width and relative pisition. It's
+            // child is the actual visible divider with width 2px and position absolute
+            // This allows us not to worry about divider width when calculating segment width
             const dividerChild = document.createElement('div')
             dividerChild.style.position = 'absolute'
             dividerChild.style.left = "-1px"
@@ -211,6 +234,60 @@
         this.state.toolTip.form.colorInput.value = this.selectedSeg.backgroundColor
       }
 
+      removeClickHandler(e) {
+        e.preventDefault()
+        if (!this.selectedSeg.left && !this.selectedSeg.right) {
+          console.log('You will have no more segments in your bar!')
+        } else if (!this.selectedSeg.left) {
+          this.clearBar()
+          const neighbor = this.selectedSeg.right.right
+          console.log('neighr before', neighbor)
+          let totalWidthPercent = this.getTotalWidthPercent()
+          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
+          const newWidth = 100.00 - restWidthPercent + neighbor.width
+          neighbor.width = newWidth
+          console.log('neighr before', neighbor)
+          neighbor.left = null
+          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
+          // this.clearBar()
+          this.drawBar()
+        } else if (!this.selectedSeg.right) {
+          this.clearBar()
+          const neighbor = this.selectedSeg.left.left
+          console.log('neighr before', neighbor)
+          let totalWidthPercent = this.getTotalWidthPercent()
+          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
+          const newWidth = 100.00 - restWidthPercent + neighbor.width
+          neighbor.width = newWidth
+          console.log('neighr before', neighbor)
+          neighbor.right = null
+          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
+          // this.clearBar()
+          this.drawBar()
+        } else {
+          this.clearBar()
+          const leftNeighbor = this.selectedSeg.left.left
+          const rightNeighbor = this.selectedSeg.right.right
+          console.log({ leftNeighbor, rightNeighbor })
+          let totalWidthPercent = this.getTotalWidthPercent()
+          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
+          const halfWidth = (100.00 - restWidthPercent) / 2
+          leftNeighbor.width = leftNeighbor.width + halfWidth
+          rightNeighbor.width = rightNeighbor.width + halfWidth
+          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
+          this.drawBar()
+        }
+        this.state.toolTip.element.style.display = "none"
+      }
+
+      getTotalWidthPercent() {
+        let totalWidthPercent = 0
+        this.state.segments.forEach(seg => {
+          totalWidthPercent += parseFloat(seg.element.style.width)
+        })
+        return totalWidthPercent
+      }
+
       handleFormSubmit(e) {
         e.preventDefault()
         this.selectedSeg.backgroundColor = this.state.toolTip.form.colorInput.value
@@ -220,9 +297,9 @@
         this.state.toolTip.element.style.display = "none"
       }
 
-      clearBar(){
-        if(this.state.segments.length !== 0){
-          this.state.segments.forEach(seg =>{
+      clearBar() {
+        if (this.state.segments.length !== 0) {
+          this.state.segments.forEach(seg => {
             seg.element.remove()
             seg.right && seg.right.remove()
           })
