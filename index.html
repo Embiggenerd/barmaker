@@ -11,8 +11,8 @@
     }
 
     .toolTip {
-      width: 100px;
-      height: 150px;
+      width: 180px;
+      height: 220px;
       font-size: 1em;
       line-height: 1.5;
       margin: 0;
@@ -22,11 +22,10 @@
       background: #fff;
       color: #333333;
       border-radius: 3px;
-      transition: all .1s ease;
-      /* pointer-events: none; */
+      /* transition: all .1s ease; */
       transform: translate(-50%, 0);
       box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.1);
-      padding: 10px 10px 8px;
+      /* padding: 10px 10px 8px; */
       text-align: center;
       opacity: 1;
       left: 368.88px;
@@ -43,7 +42,7 @@
       border-left: 10px solid transparent;
       border-right: 10px solid transparent;
       border-top: 10px solid #fff;
-      left: calc(50% - 10px);
+      left: calc(50% - 14px);
       bottom: -9px;
     }
 
@@ -55,15 +54,115 @@
     }
 
     .closeToolTipButton {
-      color: red
+      color: red;
+      font-size: 1.3em;
+      float: right;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .tabs {
+      position: relative;
+      /* min-height: 200px; */
+      /* This part sucks */
+      height: 55px;
+      width: 180px;
+      clear: both;
+      margin: 0;
+    }
+
+    .tab {
+      float: left;
+    }
+
+    .tab label {
+      background: #eee;
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-left: -1px;
+      position: relative;
+      left: 1px;
+    }
+
+    .tab [type="radio"] {
+      display: none
+    }
+
+    .content {
+      position: absolute;
+      top: 28px;
+      left: 0;
+      background: white;
+      right: 0;
+      bottom: 0;
+      /* padding: 20px; */
+      border: 1px solid #ccc;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      overflow: hidden;
+    }
+
+    .content>* {
+      opacity: 0;
+      transform: translateX(-100%);
+      transition: all 0.6s ease;
+    }
+
+    [type="radio"]:focus~label {
+      outline: 2px solid blue;
+    }
+
+    [type="radio"]:checked~label {
+      background: white;
+      border-bottom: 1px solid white;
+      z-index: 2;
+    }
+
+    [type="radio"]:checked~label~.content {
+      z-index: 1;
+    }
+
+    [type="radio"]:checked~label~.content>* {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .content p {
+      margin: 0;
+    }
+
+    .toolTip form {
+      /* border: 1px solid #ccc; */
+      border-top: none;
+      border-left: none;
+      border-right: none;
+
     }
   </style>
 </head>
 
 <body style="position:relative">
 
-  <div class="tooltip" id="toolTip" style="opacity: 1; left: 368.88px; top: 16.646px;">
-   <p class="closeToolTipButton">X</p>
+  <div class="toolTip" id="toolTip">
+    <div class="tabs">
+      <p class="closeToolTipButton">&#x2715</p>
+
+      <div class="tab">
+        <input type="radio" id="edit" name="tab-group" checked>
+        <label for="edit">Edit</label>
+        <div class="content">
+          <p>Edit a segment</p>
+        </div>
+      </div>
+      <div class="tab">
+        <input type="radio" id="add" name="tab-group">
+        <label for="add">Add</label>
+        <div class="content">
+          <p>Add a new segment</p>
+        </div>
+      </div>
+    </div>
     <form>
       <label for="text">Text:</label><br>
       <input type="text" id="text" name="text" value=""><br>
@@ -102,7 +201,7 @@
         this.mouseDownHandler = this.mouseDownHandler.bind(this)
         this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
         this.mouseUpHandler = this.mouseUpHandler.bind(this)
-        this.onClickHandler = this.onClickHandler.bind(this)
+        this.segmentClickHandler = this.segmentClickHandler.bind(this)
         this.handleFormSubmit = this.handleFormSubmit.bind(this)
         this.removeClickHandler = this.removeClickHandler.bind(this)
         this.initBar(initialState);
@@ -165,6 +264,14 @@
         this.state.toolTip.removeButton.addEventListener('click', this.removeClickHandler)
         this.state.toolTip.closeToolTipButton = document.querySelector('.closeToolTipButton')
         this.state.toolTip.closeToolTipButton.addEventListener('click', () => this.state.toolTip.element.style.display = "none")
+
+        document.querySelector(`input[type="radio"]#${this.state.toolTip.form.state}`).checked = true;
+        document.querySelectorAll('input[name="tab-group"]').forEach((elem) => {
+          elem.addEventListener("change", (e) => {
+            const state = e.target.id;
+            this.state.toolTip.form.state = state
+          });
+        });
       }
 
       drawBar() {
@@ -176,7 +283,7 @@
           segmentDiv.style.height = height
           segmentDiv.style.display = display
           segmentDiv.innerText = innerText
-          segmentDiv.addEventListener('click', this.onClickHandler)
+          segmentDiv.addEventListener('click', this.segmentClickHandler)
           this.bar.appendChild(segmentDiv)
           this.state.segments[i].element = segmentDiv
 
@@ -215,14 +322,15 @@
         }
       }
 
-      onClickHandler(e) {
+      segmentClickHandler(e) {
         e.preventDefault()
         console.log('this.state', this.state)
         // Draw toolTip
         const location = { x: e.clientX, y: this.bar.getBoundingClientRect().top }
-        this.state.toolTip.element.style.left = `${location.x}px`
-        this.state.toolTip.element.style.top = `-150px`
         this.state.toolTip.element.style.display = "block"
+        this.state.toolTip.element.style.left = `${location.x}px`
+        console.log('hhhhhh', this.state.toolTip.element.style)
+        this.state.toolTip.element.style.top = `-${this.state.toolTip.element.offsetHeight}`
         // Set which segment we clicked on
         this.selectedSeg = this.state.segments.find(s => {
           return s.element === e.target
@@ -290,10 +398,37 @@
 
       handleFormSubmit(e) {
         e.preventDefault()
-        this.selectedSeg.backgroundColor = this.state.toolTip.form.colorInput.value
-        this.selectedSeg.innerText = this.state.toolTip.form.textInput.value
-        this.clearBar()
-        this.drawBar()
+        const colorValue = this.state.toolTip.form.colorInput.value
+        const textValue = this.state.toolTip.form.textInput.value
+        if (this.state.toolTip.form.state === "edit") {
+          this.selectedSeg.backgroundColor = colorValue
+          this.selectedSeg.innerText = textValue
+          this.clearBar()
+          this.drawBar()
+        } else if (this.state.toolTip.form.state === "add") {
+          const halfWidth = this.selectedSeg.width / 2
+          this.selectedSeg.width = halfWidth
+          const newSeg = {
+            backgroundColor: colorValue,
+            width: halfWidth,
+            display: "flex",
+            height: "100px",
+            innerText: textValue,
+            left: null,
+            right: null,
+            element: null
+          }
+          
+          this.clearBar()
+          const index = this.state.segments.indexOf(this.state.selectedSeg)
+          const segmentsCopy = [...this.state.segments]
+          console.log('state.segments before', this.state.segments)
+          segmentsCopy.splice(index, 0, newSeg)
+          this.state.segments = segmentsCopy
+          console.log('state.segments after', this.state.segments)
+          
+          this.drawBar()
+        }
         this.state.toolTip.element.style.display = "none"
       }
 
