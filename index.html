@@ -318,18 +318,16 @@
             this.state.segments[i].left = dividerDiv
             dividerDiv.right = this.state.segments[i]
           }
-          console.log('this.state.segments[i]', this.state.segments[i])
         }
       }
 
       segmentClickHandler(e) {
         e.preventDefault()
-        console.log('this.state', this.state)
         // Draw toolTip
-        const location = { x: e.clientX, y: this.bar.getBoundingClientRect().top }
+        this.x = e.clientX
+        const location = { x: this.x - 4, y: this.bar.getBoundingClientRect().top }
         this.state.toolTip.element.style.display = "block"
         this.state.toolTip.element.style.left = `${location.x}px`
-        console.log('hhhhhh', this.state.toolTip.element.style)
         this.state.toolTip.element.style.top = `-${this.state.toolTip.element.offsetHeight}`
         // Set which segment we clicked on
         this.selectedSeg = this.state.segments.find(s => {
@@ -349,34 +347,27 @@
         } else if (!this.selectedSeg.left) {
           this.clearBar()
           const neighbor = this.selectedSeg.right.right
-          console.log('neighr before', neighbor)
           let totalWidthPercent = this.getTotalWidthPercent()
           const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
           const newWidth = 100.00 - restWidthPercent + neighbor.width
           neighbor.width = newWidth
-          console.log('neighr before', neighbor)
           neighbor.left = null
           this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
-          // this.clearBar()
           this.drawBar()
         } else if (!this.selectedSeg.right) {
           this.clearBar()
           const neighbor = this.selectedSeg.left.left
-          console.log('neighr before', neighbor)
           let totalWidthPercent = this.getTotalWidthPercent()
           const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
           const newWidth = 100.00 - restWidthPercent + neighbor.width
           neighbor.width = newWidth
-          console.log('neighr before', neighbor)
           neighbor.right = null
           this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
-          // this.clearBar()
           this.drawBar()
         } else {
           this.clearBar()
           const leftNeighbor = this.selectedSeg.left.left
           const rightNeighbor = this.selectedSeg.right.right
-          console.log({ leftNeighbor, rightNeighbor })
           let totalWidthPercent = this.getTotalWidthPercent()
           const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
           const halfWidth = (100.00 - restWidthPercent) / 2
@@ -406,11 +397,23 @@
           this.clearBar()
           this.drawBar()
         } else if (this.state.toolTip.form.state === "add") {
-          const halfWidth = this.selectedSeg.width / 2
-          this.selectedSeg.width = halfWidth
+          const index = this.state.segments.indexOf(this.selectedSeg)
+
+          // We get the width of the new segment by getting how
+          
+          let leftLengths = 0
+          for(let i = 0;i < index; i++){
+            leftLengths = leftLengths + this.state.segments[i].element.getBoundingClientRect().width
+          }
+          const pxFromLeft = this.x - this.bar.getBoundingClientRect().left - leftLengths
+          const newWidth = (pxFromLeft / this.bar.getBoundingClientRect().width) * 100
+          
+          // const totalPercent = getTotalWidthPercent
+          // const halfWidth = this.selectedSeg.width / 2
+          this.selectedSeg.width = this.selectedSeg.width - newWidth
           const newSeg = {
             backgroundColor: colorValue,
-            width: halfWidth,
+            width: newWidth,
             display: "flex",
             height: "100px",
             innerText: textValue,
@@ -418,17 +421,15 @@
             right: null,
             element: null
           }
-          
+
           this.clearBar()
-          const index = this.state.segments.indexOf(this.state.selectedSeg)
           const segmentsCopy = [...this.state.segments]
-          console.log('state.segments before', this.state.segments)
           segmentsCopy.splice(index, 0, newSeg)
           this.state.segments = segmentsCopy
-          console.log('state.segments after', this.state.segments)
-          
           this.drawBar()
         }
+        this.selectedSeg = null
+        this.x = 0
         this.state.toolTip.element.style.display = "none"
       }
 
@@ -447,7 +448,6 @@
 
         // Get the current mouse position
         this.x = e.clientX;
-        console.log('this.selectedDivider', this.selectedDivider)
         this.leftWidth = this.selectedDivider.left.element.getBoundingClientRect().width;
         this.rightWidth = this.selectedDivider.right.element.getBoundingClientRect().width;
 
@@ -468,7 +468,6 @@
         e.preventDefault()
         // How far the mouse has been moved
         const dx = e.clientX - this.x;
-        // console.log('mouse moved', dx)
         const newLeftWidth =
           ((this.leftWidth + dx) * 100) /
           this.parent.getBoundingClientRect().width;
@@ -506,7 +505,7 @@
 
         this.leftWidth = 0
         this.rightWidth = 0
-
+        this.x = 0
         this.selectedDivider = null
 
         document.removeEventListener("mousemove", this.mouseMoveHandler);
