@@ -456,6 +456,13 @@
       }
 
       handleSegmentDragstart(e){
+        // create custome drag image
+        const clone = e.target.cloneNode(true)
+        clone.style.position = "absolute";
+        clone.style.top = "-1000px";
+        document.body.appendChild(clone);
+        e.dataTransfer.setDragImage(clone, clone.getBoundingClientRect().width/2, clone.getBoundingClientRect().height/2)
+        
         this.selectedSeg = this.selectedSeg = this.state.segments.find(s => {
           return s.element === e.target
         })
@@ -475,9 +482,9 @@
       }
 
       handleSegmentDragleave(e){
+        e.target.style.border='none'
         e.preventDefault()
         if(e.target === this.draggedOver.element){
-
           this.draggedOver = null
         }
         console.log('handleLeave', this.draggedOver, this.selectedSeg, e.target)
