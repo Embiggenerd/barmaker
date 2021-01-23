@@ -204,6 +204,11 @@
         this.segmentClickHandler = this.segmentClickHandler.bind(this)
         this.handleFormSubmit = this.handleFormSubmit.bind(this)
         this.removeClickHandler = this.removeClickHandler.bind(this)
+        this.handleSegmentDragstart = this.handleSegmentDragstart.bind(this)
+        this.handleSegmentDragenter = this.handleSegmentDragenter.bind(this)
+        this.handleSegmentDragleave = this.handleSegmentDragleave.bind(this)
+        this.handleSegmentDragend = this.handleSegmentDragend.bind(this)
+        this.handleSegmentDrop = this.handleSegmentDrop.bind(this)
         this.initBar(initialState);
       }
 
@@ -282,8 +287,16 @@
           segmentDiv.style.width = `${width}%`
           segmentDiv.style.height = height
           segmentDiv.style.display = display
+          segmentDiv.style.resize = "none"
           segmentDiv.innerText = innerText
+          segmentDiv.setAttribute('draggable', 'true')
           segmentDiv.addEventListener('click', this.segmentClickHandler)
+          segmentDiv.addEventListener('dragstart', this.handleSegmentDragstart)
+          segmentDiv.addEventListener('dragenter', this.handleSegmentDragenter)
+          segmentDiv.addEventListener('dragover', (e) => e.preventDefault())
+          segmentDiv.addEventListener('dragleave', this.handleSegmentDragleave)
+          segmentDiv.addEventListener('dragend', this.handleSegmentDragend)
+          segmentDiv.addEventListener('drop', this.handleSegmentDrop)
           this.bar.appendChild(segmentDiv)
           this.state.segments[i].element = segmentDiv
 
@@ -440,6 +453,61 @@
             seg.right && seg.right.remove()
           })
         }
+      }
+
+      handleSegmentDragstart(e){
+        this.selectedSeg = this.selectedSeg = this.state.segments.find(s => {
+          return s.element === e.target
+        })
+        console.log(this.selectedSeg)
+      }
+
+      handleSegmentDragenter(e){
+        e.preventDefault()
+        this.draggedOver = this.state.segments.find(s => {
+          return s.element === e.target
+        })
+        console.log('this.draggenter',this.draggedOver, this.selectedSeg)
+        if(this.draggedOver.element !== this.selectedSeg.element){ 
+          this.draggedOver.element.style.borderTop = 'black 1px solid'
+          this.draggedOver.element.style.borderBottom = 'black 1px solid'
+        }
+      }
+
+      handleSegmentDragleave(e){
+        e.preventDefault()
+        if(e.target === this.draggedOver.element){
+
+          this.draggedOver = null
+        }
+        console.log('handleLeave', this.draggedOver, this.selectedSeg, e.target)
+      }
+
+      handleSegmentDragend(e){
+        console.log('this.draggedend',this.draggedOver, this.selectedSeg)
+        // if(this.selectedSeg && this.selectedSeg.element === e.target){
+        //   this.selectedSeg = null
+        // }
+        if(!this.draggedOver){
+          this.selectedSeg = null
+          console.log('ended')
+        }
+      }
+
+      handleSegmentDrop(e){
+        e.preventDefault()
+        console.log('handleDrop', this.draggedOver, this.selectedSeg)
+        if(this.draggedOver && this.draggedOver.element !== this.selectedSeg.element){
+          console.log('dropped')
+          const indexSelected = this.state.segments.indexOf(this.selectedSeg)
+          const indexDraggedover = this.state.segments.indexOf(this.draggedOver)
+          this.state.segments[indexSelected] = this.draggedOver
+          this.state.segments[indexDraggedover] = this.selectedSeg
+          this.clearBar()
+          this.drawBar()
+        }
+        this.draggedOver = null
+        this.selectedSeg = null
       }
 
       mouseDownHandler(e) {
