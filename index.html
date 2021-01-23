@@ -10,7 +10,7 @@
       padding: 0;
     }
 
-    .toolTip {
+    .tooltip {
       width: 180px;
       height: 220px;
       font-size: 1em;
@@ -33,7 +33,7 @@
       display: none;
     }
 
-    .toolTip:after {
+    .tooltip:after {
       content: '';
       display: block;
       width: 0;
@@ -54,7 +54,7 @@
     }
 
     .closeToolTipButton {
-      color: red;
+      /* color: red; */
       font-size: 1.3em;
       float: right;
       margin: 0;
@@ -132,7 +132,7 @@
       margin: 0;
     }
 
-    .toolTip form {
+    .tooltip form {
       /* border: 1px solid #ccc; */
       border-top: none;
       border-left: none;
@@ -142,9 +142,9 @@
   </style>
 </head>
 
-<body style="position:relative">
+<body>
 
-  <div class="toolTip" id="toolTip">
+  <div class="tooltip" id="tooltip">
     <div class="tabs">
       <p class="closeToolTipButton">&#x2715</p>
 
@@ -183,8 +183,11 @@
     class BarMaker {
       constructor(initialState) {
         this.state = {
+          bar: {
+            height: 50,
+          },
           segments: [],
-          toolTip: {
+          tooltip: {
             form: {
               state: "edit",
               element: null,
@@ -193,6 +196,7 @@
               removeButton: null,
               closeToolTipButton: null
             },
+            open: false,
             element: null
           },
           parentID: ""
@@ -200,17 +204,8 @@
         this.selectedDivider = null
         this.leftWidth = 0
         this.rightWidth = 0
-        this.dividerMousedownHandler = this.dividerMousedownHandler.bind(this)
-        this.dividerMousemoveHandler = this.dividerMousemoveHandler.bind(this)
-        this.dividerMouseupHandler = this.dividerMouseupHandler.bind(this)
-        this.tooltipFormSubmitHandler = this.tooltipFormSubmitHandler.bind(this)
-        this.segmentClickHandler = this.segmentClickHandler.bind(this)
-        this.segmentRemoveHandler = this.segmentRemoveHandler.bind(this)
-        this.segmentDragstartHandler = this.segmentDragstartHandler.bind(this)
-        this.segmentDragentertHandler = this.segmentDragentertHandler.bind(this)
-        this.segmentDragleaveHandler = this.segmentDragleaveHandler.bind(this)
-        this.segmentDragendHandler = this.segmentDragendHandler.bind(this)
-        this.segmentDropHandler = this.segmentDropHandler.bind(this)
+        this.bindHandlers = this.bindHandlers.bind(this)
+        this.bindHandlers()
         this.initBar(initialState);
       }
 
@@ -220,8 +215,7 @@
             {
               backgroundColor: "#ffff00",
               width: (1 / 3) * 100,
-              display: "flex",
-              height: "100px",
+              height: `${this.state.bar.height}px`,
               innerText: "left",
               left: null,
               right: null,
@@ -230,8 +224,7 @@
             {
               backgroundColor: "#FFC0CB",
               width: (1 / 3) * 100,
-              display: "flex",
-              height: "100px",
+              height: `${this.state.bar.height}px`,
               innerText: "middle",
               left: null,
               right: null,
@@ -240,8 +233,7 @@
             {
               backgroundColor: "#add8e6",
               width: (1 / 3) * 100,
-              display: "flex",
-              height: "100px",
+              height: `${this.state.bar.height}px`,
               innerText: "right",
               left: null,
               right: null,
@@ -257,7 +249,8 @@
         this.parent = document.querySelector(`#${this.state.parentID}`)
         this.bar = document.createElement('div')
         this.bar.style.display = "flex"
-        this.bar.style.height = "100px"
+        this.bar.style.height = `${this.state.bar.height}px`
+        this.bar.style.position = "relative"
         this.drawBar()
         this.initToolTip()
         this.parent.appendChild(this.bar)
@@ -299,7 +292,7 @@
             dividerChild.style.left = "-1px"
             dividerChild.style.width = "2px"
             dividerChild.style.backgroundColor = "black"
-            dividerChild.style.height = this.bar.style.height
+            dividerChild.style.height = `${this.state.bar.height}px`
             dividerDiv.appendChild(dividerChild)
             dividerChild.style.cursor = "ew-resize";
             dividerDiv.left = this.state.segments[i]
@@ -331,44 +324,45 @@
       // *************************** Tooltip Handlers *************************** \\
 
       initToolTip() {
-        this.state.toolTip.element = document.querySelector('#toolTip')
-        this.state.toolTip.form.element = document.querySelector('.toolTip form')
-        this.state.toolTip.form.element.addEventListener('submit', this.tooltipFormSubmitHandler)
-        this.state.toolTip.removeButton = document.querySelector('.removeButton')
-        this.state.toolTip.removeButton.addEventListener('click', this.segmentRemoveHandler)
-        this.state.toolTip.closeToolTipButton = document.querySelector('.closeToolTipButton')
-        this.state.toolTip.closeToolTipButton.addEventListener('click', () => this.state.toolTip.element.style.display = "none")
+        this.state.tooltip.element = document.querySelector('#tooltip')
+        this.state.tooltip.form.element = document.querySelector('.tooltip form')
+        this.state.tooltip.form.element.addEventListener('submit', this.tooltipFormSubmitHandler)
+        this.state.tooltip.removeButton = document.querySelector('.removeButton')
+        this.state.tooltip.removeButton.addEventListener('click', this.segmentRemoveHandler)
+        this.state.tooltip.closeToolTipButton = document.querySelector('.closeToolTipButton')
+        document.addEventListener('click', this.tooltipCloseHandler)
 
-        document.querySelector(`input[type="radio"]#${this.state.toolTip.form.state}`).checked = true;
+        document.querySelector(`input[type="radio"]#${this.state.tooltip.form.state}`).checked = true;
         document.querySelectorAll('input[name="tab-group"]').forEach((elem) => {
           elem.addEventListener("change", (e) => {
             const state = e.target.id;
-            this.state.toolTip.form.state = state
+            this.state.tooltip.form.state = state
           });
         });
+        this.bar.appendChild(this.state.tooltip.element)
       }
 
       tooltipFormSubmitHandler(e) {
         e.preventDefault()
-        const colorValue = this.state.toolTip.form.colorInput.value
-        const textValue = this.state.toolTip.form.textInput.value
-        if (this.state.toolTip.form.state === "edit") {
+        const colorValue = this.state.tooltip.form.colorInput.value
+        const textValue = this.state.tooltip.form.textInput.value
+        if (this.state.tooltip.form.state === "edit") {
           this.selectedSeg.backgroundColor = colorValue
           this.selectedSeg.innerText = textValue
           this.clearBar()
           this.drawBar()
-        } else if (this.state.toolTip.form.state === "add") {
+        } else if (this.state.tooltip.form.state === "add") {
           const index = this.state.segments.indexOf(this.selectedSeg)
 
           // We get the width of the new segment by getting how
-          
+
           let leftLengths = 0
-          for(let i = 0;i < index; i++){
+          for (let i = 0; i < index; i++) {
             leftLengths = leftLengths + this.state.segments[i].element.getBoundingClientRect().width
           }
           const pxFromLeft = this.x - this.bar.getBoundingClientRect().left - leftLengths
           const newWidth = (pxFromLeft / this.bar.getBoundingClientRect().width) * 100
-          
+
           // const totalPercent = getTotalWidthPercent
           // const halfWidth = this.selectedSeg.width / 2
           this.selectedSeg.width = this.selectedSeg.width - newWidth
@@ -391,28 +385,49 @@
         }
         this.selectedSeg = null
         this.x = 0
-        this.state.toolTip.element.style.display = "none"
+        this.state.tooltip.element.style.display = "none"
+      }
+
+      tooltipOpenHandler(e) {
+        this.state.tooltip.element.style.display = "block"
+        const location = { x: this.x - 4, y: this.bar.getBoundingClientRect().top }
+        this.state.tooltip.element.style.left = `${location.x}px`
+        this.state.tooltip.element.style.top = `-${this.state.tooltip.element.offsetHeight}`
+      }
+
+      tooltipCloseHandler(e) {
+        console.log('close', e.target)
+        if (this.state.tooltip.element.style.display !== "none") {
+          if (!this.state.tooltip.element.contains(e.target)) {
+            this.state.tooltip.element.style.display = "none"
+          }
+        }
+        console.log('close after', this.state.tooltip)
       }
 
       // *************************** Segment Handlers *************************** \\
 
       segmentClickHandler(e) {
+        console.log('open', this.state.tooltip)
         e.preventDefault()
-        // Draw toolTip
+        // Draw tooltip
         this.x = e.clientX
-        const location = { x: this.x - 4, y: this.bar.getBoundingClientRect().top }
-        this.state.toolTip.element.style.display = "block"
-        this.state.toolTip.element.style.left = `${location.x}px`
-        this.state.toolTip.element.style.top = `-${this.state.toolTip.element.offsetHeight}`
+
         // Set which segment we clicked on
         this.selectedSeg = this.state.segments.find(s => {
           return s.element === e.target
         })
         // Hydrate form
-        this.state.toolTip.form.textInput = document.querySelector('input#text')
-        this.state.toolTip.form.textInput.value = this.selectedSeg.innerText
-        this.state.toolTip.form.colorInput = document.querySelector('input#color')
-        this.state.toolTip.form.colorInput.value = this.selectedSeg.backgroundColor
+        this.state.tooltip.form.textInput = document.querySelector('input#text')
+        this.state.tooltip.form.textInput.value = this.selectedSeg.innerText
+        this.state.tooltip.form.colorInput = document.querySelector('input#color')
+        this.state.tooltip.form.colorInput.value = this.selectedSeg.backgroundColor
+        setTimeout(() => {
+          this.tooltipOpenHandler()
+        }
+          , 0)
+        console.log('open after', this.state.tooltip)
+
       }
 
       segmentRemoveHandler(e) {
@@ -451,58 +466,58 @@
           this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
           this.drawBar()
         }
-        this.state.toolTip.element.style.display = "none"
+        this.state.tooltip.element.style.display = "none"
       }
 
-      segmentDragstartHandler(e){
+      segmentDragstartHandler(e) {
         // create custome drag image
         const clone = e.target.cloneNode(true)
         clone.style.position = "absolute";
         clone.style.top = "-1000px";
         document.body.appendChild(clone);
-        e.dataTransfer.setDragImage(clone, clone.getBoundingClientRect().width/2, clone.getBoundingClientRect().height/2)
-        
+        e.dataTransfer.setDragImage(clone, clone.getBoundingClientRect().width / 2, clone.getBoundingClientRect().height / 2)
+
         this.selectedSeg = this.selectedSeg = this.state.segments.find(s => {
           return s.element === e.target
         })
         console.log(this.selectedSeg)
       }
 
-      segmentDragentertHandler(e){
+      segmentDragentertHandler(e) {
         e.preventDefault()
         this.draggedOver = this.state.segments.find(s => {
           return s.element === e.target
         })
-        console.log('this.draggenter',this.draggedOver, this.selectedSeg)
-        if(this.draggedOver.element !== this.selectedSeg.element){ 
+        console.log('this.draggenter', this.draggedOver, this.selectedSeg)
+        if (this.draggedOver.element !== this.selectedSeg.element) {
           this.draggedOver.element.style.borderBottom = 'black 3px solid'
         }
       }
 
-      segmentDragleaveHandler(e){
-        e.target.style.border='none'
+      segmentDragleaveHandler(e) {
+        e.target.style.border = 'none'
         e.preventDefault()
-        if(e.target === this.draggedOver.element){
+        if (e.target === this.draggedOver.element) {
           this.draggedOver = null
         }
         console.log('handleLeave', this.draggedOver, this.selectedSeg, e.target)
       }
 
-      segmentDragendHandler(e){
-        console.log('this.draggedend',this.draggedOver, this.selectedSeg)
+      segmentDragendHandler(e) {
+        console.log('this.draggedend', this.draggedOver, this.selectedSeg)
         // if(this.selectedSeg && this.selectedSeg.element === e.target){
         //   this.selectedSeg = null
         // }
-        if(!this.draggedOver){
+        if (!this.draggedOver) {
           this.selectedSeg = null
           console.log('ended')
         }
       }
 
-      segmentDropHandler(e){
+      segmentDropHandler(e) {
         e.preventDefault()
         console.log('handleDrop', this.draggedOver, this.selectedSeg)
-        if(this.draggedOver && this.draggedOver.element !== this.selectedSeg.element){
+        if (this.draggedOver && this.draggedOver.element !== this.selectedSeg.element) {
           console.log('dropped')
           const indexSelected = this.state.segments.indexOf(this.selectedSeg)
           const indexDraggedover = this.state.segments.indexOf(this.draggedOver)
@@ -607,9 +622,25 @@
         })
         return totalWidthPercent
       }
-      
+
+      bindHandlers(){
+        this.dividerMousedownHandler = this.dividerMousedownHandler.bind(this)
+        this.dividerMousemoveHandler = this.dividerMousemoveHandler.bind(this)
+        this.dividerMouseupHandler = this.dividerMouseupHandler.bind(this)
+        this.tooltipFormSubmitHandler = this.tooltipFormSubmitHandler.bind(this)
+        this.segmentClickHandler = this.segmentClickHandler.bind(this)
+        this.segmentRemoveHandler = this.segmentRemoveHandler.bind(this)
+        this.segmentDragstartHandler = this.segmentDragstartHandler.bind(this)
+        this.segmentDragentertHandler = this.segmentDragentertHandler.bind(this)
+        this.segmentDragleaveHandler = this.segmentDragleaveHandler.bind(this)
+        this.segmentDragendHandler = this.segmentDragendHandler.bind(this)
+        this.segmentDropHandler = this.segmentDropHandler.bind(this)
+        this.tooltipCloseHandler = this.tooltipCloseHandler.bind(this)
+        this.tooltipOpenHandler = this.tooltipOpenHandler.bind(this)
+      }
+
       // createDivider(left = null, right = null) { return { left, right } };
-      
+
       // createSegement(
       //   left = null,
       //   right = null,
