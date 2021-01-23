@@ -166,12 +166,10 @@
     <form>
       <label for="text">Text:</label><br>
       <input type="text" id="text" name="text" value=""><br>
-      <label for="color">Color:</label>
-      <input type="color" id="color" name="color" value="">
 
-      <!-- <label for="color">Color:</label><br>
-      <input type="color" value="" id="color" name="color">
-       -->
+      <label for="color">Color:</label><br>
+      <input type="color" id="color" name="color" value="#ffff00">
+
       <input type="submit">
     </form>
 
@@ -202,17 +200,17 @@
         this.selectedDivider = null
         this.leftWidth = 0
         this.rightWidth = 0
-        this.mouseDownHandler = this.mouseDownHandler.bind(this)
-        this.mouseMoveHandler = this.mouseMoveHandler.bind(this)
-        this.mouseUpHandler = this.mouseUpHandler.bind(this)
+        this.dividerMousedownHandler = this.dividerMousedownHandler.bind(this)
+        this.dividerMousemoveHandler = this.dividerMousemoveHandler.bind(this)
+        this.dividerMouseupHandler = this.dividerMouseupHandler.bind(this)
+        this.tooltipFormSubmitHandler = this.tooltipFormSubmitHandler.bind(this)
         this.segmentClickHandler = this.segmentClickHandler.bind(this)
-        this.handleFormSubmit = this.handleFormSubmit.bind(this)
-        this.removeClickHandler = this.removeClickHandler.bind(this)
-        this.handleSegmentDragstart = this.handleSegmentDragstart.bind(this)
-        this.handleSegmentDragenter = this.handleSegmentDragenter.bind(this)
-        this.handleSegmentDragleave = this.handleSegmentDragleave.bind(this)
-        this.handleSegmentDragend = this.handleSegmentDragend.bind(this)
-        this.handleSegmentDrop = this.handleSegmentDrop.bind(this)
+        this.segmentRemoveHandler = this.segmentRemoveHandler.bind(this)
+        this.segmentDragstartHandler = this.segmentDragstartHandler.bind(this)
+        this.segmentDragentertHandler = this.segmentDragentertHandler.bind(this)
+        this.segmentDragleaveHandler = this.segmentDragleaveHandler.bind(this)
+        this.segmentDragendHandler = this.segmentDragendHandler.bind(this)
+        this.segmentDropHandler = this.segmentDropHandler.bind(this)
         this.initBar(initialState);
       }
 
@@ -265,24 +263,6 @@
         this.parent.appendChild(this.bar)
       }
 
-      initToolTip() {
-        this.state.toolTip.element = document.querySelector('#toolTip')
-        this.state.toolTip.form.element = document.querySelector('.toolTip form')
-        this.state.toolTip.form.element.addEventListener('submit', this.handleFormSubmit)
-        this.state.toolTip.removeButton = document.querySelector('.removeButton')
-        this.state.toolTip.removeButton.addEventListener('click', this.removeClickHandler)
-        this.state.toolTip.closeToolTipButton = document.querySelector('.closeToolTipButton')
-        this.state.toolTip.closeToolTipButton.addEventListener('click', () => this.state.toolTip.element.style.display = "none")
-
-        document.querySelector(`input[type="radio"]#${this.state.toolTip.form.state}`).checked = true;
-        document.querySelectorAll('input[name="tab-group"]').forEach((elem) => {
-          elem.addEventListener("change", (e) => {
-            const state = e.target.id;
-            this.state.toolTip.form.state = state
-          });
-        });
-      }
-
       drawBar() {
         for (let i = 0; i < this.state.segments.length; i++) {
           const segmentDiv = document.createElement("div")
@@ -295,12 +275,12 @@
           segmentDiv.innerText = innerText
           segmentDiv.setAttribute('draggable', 'true')
           segmentDiv.addEventListener('click', this.segmentClickHandler)
-          segmentDiv.addEventListener('dragstart', this.handleSegmentDragstart)
-          segmentDiv.addEventListener('dragenter', this.handleSegmentDragenter)
+          segmentDiv.addEventListener('dragstart', this.segmentDragstartHandler)
+          segmentDiv.addEventListener('dragenter', this.segmentDragentertHandler)
           segmentDiv.addEventListener('dragover', (e) => e.preventDefault())
-          segmentDiv.addEventListener('dragleave', this.handleSegmentDragleave)
-          segmentDiv.addEventListener('dragend', this.handleSegmentDragend)
-          segmentDiv.addEventListener('drop', this.handleSegmentDrop)
+          segmentDiv.addEventListener('dragleave', this.segmentDragleaveHandler)
+          segmentDiv.addEventListener('dragend', this.segmentDragendHandler)
+          segmentDiv.addEventListener('drop', this.segmentDropHandler)
           this.bar.appendChild(segmentDiv)
           this.state.segments[i].element = segmentDiv
 
@@ -325,7 +305,7 @@
             dividerDiv.left = this.state.segments[i]
             this.state.segments[i].right = dividerDiv
             segmentDiv.insertAdjacentElement("afterend", dividerDiv)
-            dividerChild.addEventListener("mousedown", this.mouseDownHandler)
+            dividerChild.addEventListener("mousedown", this.dividerMousedownHandler)
           }
 
           // If not first segment, reference the right divider of last segment,
@@ -338,73 +318,37 @@
         }
       }
 
-      segmentClickHandler(e) {
-        e.preventDefault()
-        // Draw toolTip
-        this.x = e.clientX
-        const location = { x: this.x - 4, y: this.bar.getBoundingClientRect().top }
-        this.state.toolTip.element.style.display = "block"
-        this.state.toolTip.element.style.left = `${location.x}px`
-        this.state.toolTip.element.style.top = `-${this.state.toolTip.element.offsetHeight}`
-        // Set which segment we clicked on
-        this.selectedSeg = this.state.segments.find(s => {
-          return s.element === e.target
-        })
-        // Hydrate form
-        this.state.toolTip.form.textInput = document.querySelector('input#text')
-        this.state.toolTip.form.textInput.value = this.selectedSeg.innerText
-        this.state.toolTip.form.colorInput = document.querySelector('input#color')
-        this.state.toolTip.form.colorInput.value = this.selectedSeg.backgroundColor
-      }
-
-      removeClickHandler(e) {
-        e.preventDefault()
-        if (!this.selectedSeg.left && !this.selectedSeg.right) {
-          console.log('You will have no more segments in your bar!')
-        } else if (!this.selectedSeg.left) {
-          this.clearBar()
-          const neighbor = this.selectedSeg.right.right
-          let totalWidthPercent = this.getTotalWidthPercent()
-          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
-          const newWidth = 100.00 - restWidthPercent + neighbor.width
-          neighbor.width = newWidth
-          neighbor.left = null
-          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
-          this.drawBar()
-        } else if (!this.selectedSeg.right) {
-          this.clearBar()
-          const neighbor = this.selectedSeg.left.left
-          let totalWidthPercent = this.getTotalWidthPercent()
-          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
-          const newWidth = 100.00 - restWidthPercent + neighbor.width
-          neighbor.width = newWidth
-          neighbor.right = null
-          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
-          this.drawBar()
-        } else {
-          this.clearBar()
-          const leftNeighbor = this.selectedSeg.left.left
-          const rightNeighbor = this.selectedSeg.right.right
-          let totalWidthPercent = this.getTotalWidthPercent()
-          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
-          const halfWidth = (100.00 - restWidthPercent) / 2
-          leftNeighbor.width = leftNeighbor.width + halfWidth
-          rightNeighbor.width = rightNeighbor.width + halfWidth
-          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
-          this.drawBar()
+      // Removes the segments from the DOM, but does not affect state
+      clearBar() {
+        if (this.state.segments.length !== 0) {
+          this.state.segments.forEach(seg => {
+            seg.element.remove()
+            seg.right && seg.right.remove()
+          })
         }
-        this.state.toolTip.element.style.display = "none"
       }
 
-      getTotalWidthPercent() {
-        let totalWidthPercent = 0
-        this.state.segments.forEach(seg => {
-          totalWidthPercent += parseFloat(seg.element.style.width)
-        })
-        return totalWidthPercent
+      // *************************** Tooltip Handlers *************************** \\
+
+      initToolTip() {
+        this.state.toolTip.element = document.querySelector('#toolTip')
+        this.state.toolTip.form.element = document.querySelector('.toolTip form')
+        this.state.toolTip.form.element.addEventListener('submit', this.tooltipFormSubmitHandler)
+        this.state.toolTip.removeButton = document.querySelector('.removeButton')
+        this.state.toolTip.removeButton.addEventListener('click', this.segmentRemoveHandler)
+        this.state.toolTip.closeToolTipButton = document.querySelector('.closeToolTipButton')
+        this.state.toolTip.closeToolTipButton.addEventListener('click', () => this.state.toolTip.element.style.display = "none")
+
+        document.querySelector(`input[type="radio"]#${this.state.toolTip.form.state}`).checked = true;
+        document.querySelectorAll('input[name="tab-group"]').forEach((elem) => {
+          elem.addEventListener("change", (e) => {
+            const state = e.target.id;
+            this.state.toolTip.form.state = state
+          });
+        });
       }
 
-      handleFormSubmit(e) {
+      tooltipFormSubmitHandler(e) {
         e.preventDefault()
         const colorValue = this.state.toolTip.form.colorInput.value
         const textValue = this.state.toolTip.form.textInput.value
@@ -450,16 +394,67 @@
         this.state.toolTip.element.style.display = "none"
       }
 
-      clearBar() {
-        if (this.state.segments.length !== 0) {
-          this.state.segments.forEach(seg => {
-            seg.element.remove()
-            seg.right && seg.right.remove()
-          })
-        }
+      // *************************** Segment Handlers *************************** \\
+
+      segmentClickHandler(e) {
+        e.preventDefault()
+        // Draw toolTip
+        this.x = e.clientX
+        const location = { x: this.x - 4, y: this.bar.getBoundingClientRect().top }
+        this.state.toolTip.element.style.display = "block"
+        this.state.toolTip.element.style.left = `${location.x}px`
+        this.state.toolTip.element.style.top = `-${this.state.toolTip.element.offsetHeight}`
+        // Set which segment we clicked on
+        this.selectedSeg = this.state.segments.find(s => {
+          return s.element === e.target
+        })
+        // Hydrate form
+        this.state.toolTip.form.textInput = document.querySelector('input#text')
+        this.state.toolTip.form.textInput.value = this.selectedSeg.innerText
+        this.state.toolTip.form.colorInput = document.querySelector('input#color')
+        this.state.toolTip.form.colorInput.value = this.selectedSeg.backgroundColor
       }
 
-      handleSegmentDragstart(e){
+      segmentRemoveHandler(e) {
+        e.preventDefault()
+        if (!this.selectedSeg.left && !this.selectedSeg.right) {
+          console.log('You will have no more segments in your bar!')
+        } else if (!this.selectedSeg.left) {
+          this.clearBar()
+          const neighbor = this.selectedSeg.right.right
+          let totalWidthPercent = this.getTotalWidthPercent()
+          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
+          const newWidth = 100.00 - restWidthPercent + neighbor.width
+          neighbor.width = newWidth
+          neighbor.left = null
+          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
+          this.drawBar()
+        } else if (!this.selectedSeg.right) {
+          this.clearBar()
+          const neighbor = this.selectedSeg.left.left
+          let totalWidthPercent = this.getTotalWidthPercent()
+          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
+          const newWidth = 100.00 - restWidthPercent + neighbor.width
+          neighbor.width = newWidth
+          neighbor.right = null
+          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
+          this.drawBar()
+        } else {
+          this.clearBar()
+          const leftNeighbor = this.selectedSeg.left.left
+          const rightNeighbor = this.selectedSeg.right.right
+          let totalWidthPercent = this.getTotalWidthPercent()
+          const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
+          const halfWidth = (100.00 - restWidthPercent) / 2
+          leftNeighbor.width = leftNeighbor.width + halfWidth
+          rightNeighbor.width = rightNeighbor.width + halfWidth
+          this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
+          this.drawBar()
+        }
+        this.state.toolTip.element.style.display = "none"
+      }
+
+      segmentDragstartHandler(e){
         // create custome drag image
         const clone = e.target.cloneNode(true)
         clone.style.position = "absolute";
@@ -473,7 +468,7 @@
         console.log(this.selectedSeg)
       }
 
-      handleSegmentDragenter(e){
+      segmentDragentertHandler(e){
         e.preventDefault()
         this.draggedOver = this.state.segments.find(s => {
           return s.element === e.target
@@ -484,7 +479,7 @@
         }
       }
 
-      handleSegmentDragleave(e){
+      segmentDragleaveHandler(e){
         e.target.style.border='none'
         e.preventDefault()
         if(e.target === this.draggedOver.element){
@@ -493,7 +488,7 @@
         console.log('handleLeave', this.draggedOver, this.selectedSeg, e.target)
       }
 
-      handleSegmentDragend(e){
+      segmentDragendHandler(e){
         console.log('this.draggedend',this.draggedOver, this.selectedSeg)
         // if(this.selectedSeg && this.selectedSeg.element === e.target){
         //   this.selectedSeg = null
@@ -504,7 +499,7 @@
         }
       }
 
-      handleSegmentDrop(e){
+      segmentDropHandler(e){
         e.preventDefault()
         console.log('handleDrop', this.draggedOver, this.selectedSeg)
         if(this.draggedOver && this.draggedOver.element !== this.selectedSeg.element){
@@ -520,7 +515,9 @@
         this.selectedSeg = null
       }
 
-      mouseDownHandler(e) {
+      // *************************** Divider Handlers *************************** \\
+
+      dividerMousedownHandler(e) {
         e.preventDefault()
         this.selectedDivider = e.target.parentNode;
 
@@ -538,11 +535,11 @@
         this.selectedDivider.right.element.style.userSelect = "none";
 
         // Attach the listeners to `document`
-        document.addEventListener("mousemove", this.mouseMoveHandler);
-        document.addEventListener("mouseup", this.mouseUpHandler);
+        document.addEventListener("mousemove", this.dividerMousemoveHandler);
+        document.addEventListener("mouseup", this.dividerMouseupHandler);
       };
 
-      mouseMoveHandler(e) {
+      dividerMousemoveHandler(e) {
         e.preventDefault()
         // How far the mouse has been moved
         const dx = e.clientX - this.x;
@@ -559,7 +556,7 @@
         this.selectedDivider.right.width = newRightWidth
       }
 
-      mouseUpHandler() {
+      dividerMouseupHandler() {
         document.body.style.removeProperty("cursor");
 
         // this.selectedDivider.left.element.style.removeProperty("user-select");
@@ -586,8 +583,8 @@
         this.x = 0
         this.selectedDivider = null
 
-        document.removeEventListener("mousemove", this.mouseMoveHandler);
-        document.removeEventListener("mouseup", this.mouseUpHandler);
+        document.removeEventListener("mousemove", this.dividerMousemoveHandler);
+        document.removeEventListener("mouseup", this.dividerMouseupHandler);
 
         let totalWidthPercent = 0
         let totalWidthPixels = 0
@@ -601,18 +598,28 @@
         })
       };
 
-      createDivider(left = null, right = null) { return { left, right } };
+      // *************************** Utility Methods *************************** \\
 
-      createSegement(
-        left = null,
-        right = null,
-        color = null,
-        width = null
-      ) {
-        return {
-          left, right, color, width
-        }
-      };
+      getTotalWidthPercent() {
+        let totalWidthPercent = 0
+        this.state.segments.forEach(seg => {
+          totalWidthPercent += parseFloat(seg.element.style.width)
+        })
+        return totalWidthPercent
+      }
+      
+      // createDivider(left = null, right = null) { return { left, right } };
+      
+      // createSegement(
+      //   left = null,
+      //   right = null,
+      //   color = null,
+      //   width = null
+      // ) {
+      //   return {
+      //     left, right, color, width
+      //   }
+      // };
     }
     const bar = new BarMaker()
 
