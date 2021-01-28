@@ -129,7 +129,13 @@
       border-top: none;
       border-left: none;
       border-right: none;
+    }
 
+    .toggle-linear {
+      width: 60px;
+      height: 25px;
+      border-radius: 2px;
+      border: 1px blue solid
     }
   </style>
 </head>
@@ -165,9 +171,15 @@
     <button class="removeButton">-</button>
   </div>
 
-  <div style="margin-top:300px;" id="bar-parent"></div>
-  <!-- </div> -->
+  <div style="margin-top:250px;" id="bar-parent"></div>
 
+  <div class="toggle-linear"></div>
+  <div id="values-bar-parent"></div>
+  <button class="printButton">PRINT</button>
+
+  <pre id="print">
+
+  </pre>
   <script>
     class BarMaker {
       constructor(initialState) {
@@ -178,6 +190,9 @@
           bar: {
             height: 50,
           },
+          valuesBar: {
+            height: 10
+          },
           segments: [],
           tooltip: {
             form: {
@@ -186,19 +201,24 @@
               colorInput: null,
               textInput: null,
               removeButton: null,
-              closeToolTipButton: null
+              closeTooltipButton: null
             },
             open: false,
             element: null
           },
           parentID: ""
         }
+        this.valueSegments = []
         this.selectedDivider = null
         this.leftWidth = 0
         this.rightWidth = 0
         this.bindHandlers = this.bindHandlers.bind(this)
         this.bindHandlers()
         this.initBar(initialState);
+        this.initTooltip()
+        this.initToggleLinear()
+        this.initValuesBar()
+        this.initPrintable()
       }
 
       initBar(initialState = {}) {
@@ -250,8 +270,7 @@
         this.bar.style.height = `${this.state.bar.height}px`
         this.bar.style.position = "relative"
         this.drawBar()
-        this.distributeValues()
-        this.initToolTip()
+        this.distributeLinearValues()
         this.parent.appendChild(this.bar)
       }
 
@@ -262,7 +281,7 @@
           segmentDiv.style.backgroundColor = backgroundColor
           segmentDiv.style.width = `${width}%`
           segmentDiv.style.height = height
-          segmentDiv.style.display = display
+          // segmentDiv.style.display = display
           segmentDiv.style.resize = "none"
           segmentDiv.innerText = innerText
           segmentDiv.setAttribute('draggable', 'true')
@@ -320,32 +339,129 @@
         }
       }
 
-      distributeValues() {
+      clearValuesBar() {
+        if (this.valueSegments.length !== 0) {
+          this.valueSegments.forEach(seg => {
+            seg.remove()
+            seg.right && seg.right.remove()
+          })
+          this.valueSegments = []
+        }
+      }
+
+      distributeLinearValues() {
         const normalizedRange = this.state.valueMax - this.state.valueMin
         if (this.state.linearValues) {
           for (let i = 0; i < this.state.segments.length; i++) {
             const totalPercent = this.getTotalWidthPercent(i)
             this.state.segments[i].valueBegin = ((totalPercent / 100) * normalizedRange) + this.state.valueMin
-            if(i === this.state.segments.length - 1){
+            if (i === this.state.segments.length - 1) {
               this.state.segments[i].valueEnd = this.state.valueMax
             } else {
               this.state.segments[i].valueEnd = ((totalPercent + this.state.segments[i].width) / 100 * normalizedRange) + this.state.valueMin
             }
-            console.log({normalizedRange, totalPercent, min:this.state.valueMin, max: this.state.valueMax, width: this.state.segments[i].width})
           }
         }
-
-        console.log(this.state.segments)
       }
+
+      distributeCustomValues() {
+        const normalizedRange = this.state.valueMax - this.state.valueMin
+        console.log(this.state.segments, this.valueSegments)
+        if (!this.state.linearValues) {
+          if (this.state.segments.length === this.valueSegments.length) {
+            // figure this shit out
+            for (let i = 0; i < this.state.segments.length; i++) {
+              // A get total percent up to value segment
+              const totalPercent = this.getTotalWidthPercentValues(i) / 100
+              const totalValueSoFar = totalPercent * normalizedRange
+              const width = parseFloat(this.valueSegments[i].style.width) / 100
+              const valueChunk = width * normalizedRange
+              this.state.segments[i].valueBegin = totalValueSoFar + this.state.valueMin
+              if (i === this.state.segments.length - 1) {
+                this.state.segments[i].valueEnd = this.state.valueMax
+              } else {
+                this.state.segments[i].valueEnd = totalValueSoFar + valueChunk + this.state.valueMin
+              }
+            }
+          } else {
+            console.log('Please linearize value ranges')
+          }
+        }
+      }
+
+
+      // *************************** ValuesBar Handlers *************************** \\
+
+      initValuesBar() {
+        this.valuesParent = document.querySelector(`#values-bar-parent`)
+        this.valuesBar = document.createElement('div')
+        this.valuesBar.style.display = "flex"
+        this.valuesBar.style.height = `${this.state.valuesBar.height}px`
+        this.valuesBar.style.position = "relative"
+        this.drawValuesBar()
+        this.valuesParent.appendChild(this.valuesBar)
+      }
+
+      drawValuesBar() {
+        for (let i = 0; i < this.state.segments.length; i++) {
+          const segmentDiv = document.createElement("div")
+          const { valueBegin, valueEnd, backgroundColor } = this.state.segments[i]
+          const valueSegment = valueEnd - valueBegin
+          const valueTotal = this.state.valueMax - this.state.valueMin
+          const width = (valueSegment / valueTotal) * 100
+          segmentDiv.style.width = `${width}%`
+          segmentDiv.style.backgroundColor = backgroundColor
+          segmentDiv.style.height = this.state.valuesBar.height
+          segmentDiv.style.resize = "none"
+          segmentDiv.classList.add('value-segment')
+
+          this.valuesBar.appendChild(segmentDiv)
+          this.valueSegments.push(segmentDiv)
+          // If not the last segment, create divider, attach it as segment.right, make 
+          // divider.left a reference to segment in state
+        }
+        for (let i = 0; i < this.valueSegments.length; i++) {
+          if (i !== this.valueSegments.length - 1) {
+            const dividerDiv = document.createElement('div')
+            dividerDiv.style.backgroundColor = "black"
+            dividerDiv.style.width = "0"
+            dividerDiv.style.position = "relative"
+            // The divider is a parent div with 0 width and relative pisition. It's
+            // child is the actual visible divider with width 2px and position absolute
+            // This allows us not to worry about divider width when calculating segment width
+            const dividerChild = document.createElement('div')
+            dividerChild.style.position = 'absolute'
+            dividerChild.style.left = "-1px"
+            dividerChild.style.width = "2px"
+            dividerChild.style.backgroundColor = "black"
+            dividerChild.style.height = `${this.state.valuesBar.height}px`
+            dividerDiv.appendChild(dividerChild)
+            dividerChild.style.cursor = "ew-resize";
+            dividerDiv.left = this.valueSegments[i]
+            this.valueSegments[i].right = dividerDiv
+            this.valueSegments[i].insertAdjacentElement("afterend", dividerDiv)
+            dividerChild.addEventListener("mousedown", this.valueDividerMousedownHandler) // fix
+          }
+
+          // If not first segment, reference the right divider of last segment,
+          // attach is segment.left, and reference current segment as divider.right
+          if (i !== 0) {
+            const dividerDiv = this.valueSegments[i - 1].right
+            this.valueSegments[i].left = dividerDiv
+            dividerDiv.right = this.valueSegments[i]
+          }
+        }
+      }
+
       // *************************** Tooltip Handlers *************************** \\
 
-      initToolTip() {
+      initTooltip() {
         this.state.tooltip.element = document.querySelector('#tooltip')
         this.state.tooltip.form.element = document.querySelector('.tooltip form')
         this.state.tooltip.form.element.addEventListener('submit', this.tooltipFormSubmitHandler)
         this.state.tooltip.removeButton = document.querySelector('.removeButton')
         this.state.tooltip.removeButton.addEventListener('click', this.segmentRemoveHandler)
-        this.state.tooltip.closeToolTipButton = document.querySelector('.closeToolTipButton')
+        this.state.tooltip.closeTooltipButton = document.querySelector('.closeTooltipButton')
         document.addEventListener('click', this.tooltipCloseHandler)
 
         document.querySelector(`input[type="radio"]#${this.state.tooltip.form.state}`).checked = true;
@@ -366,8 +482,10 @@
           this.selectedSeg.backgroundColor = colorValue
           this.selectedSeg.innerText = textValue
           this.clearBar()
+          this.clearValuesBar()
           this.drawBar()
-          this.distributeValues()
+          this.distributeLinearValues()
+          this.drawValuesBar()
         } else if (this.state.tooltip.form.state === "add") {
           const index = this.state.segments.indexOf(this.selectedSeg)
 
@@ -394,15 +512,18 @@
           }
 
           this.clearBar()
+          this.state.linearValues && this.clearValuesBar()
           const segmentsCopy = [...this.state.segments]
           segmentsCopy.splice(index, 0, newSeg)
           this.state.segments = segmentsCopy
           this.drawBar()
-          this.distributeValues()
+          this.distributeLinearValues()
+          this.state.linearValues && this.drawValuesBar()
         }
         this.selectedSeg = null
         this.x = 0
         this.state.tooltip.element.style.display = "none"
+        this.printState()
       }
 
       tooltipOpenHandler(e) {
@@ -444,10 +565,10 @@
       segmentRemoveHandler(e) {
         e.preventDefault()
         if (!this.selectedSeg.left && !this.selectedSeg.right) {
-          console.log('You will have no more segments in your bar!')
           return
         } else if (!this.selectedSeg.left) {
           this.clearBar()
+          this.clearValuesBar()
           const neighbor = this.selectedSeg.right.right
           let totalWidthPercent = this.getTotalWidthPercent()
           const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
@@ -457,6 +578,7 @@
           this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
         } else if (!this.selectedSeg.right) {
           this.clearBar()
+          this.clearValuesBar()
           const neighbor = this.selectedSeg.left.left
           let totalWidthPercent = this.getTotalWidthPercent()
           const restWidthPercent = totalWidthPercent - parseFloat(this.selectedSeg.width)
@@ -476,8 +598,13 @@
           this.state.segments = this.state.segments.filter(seg => seg.element !== this.selectedSeg.element)
         }
         this.drawBar()
-        this.distributeValues()
+        this.distributeLinearValues()
+        if (this.state.linearValues) {
+          this.clearValuesBar()
+          this.drawValuesBar()
+        }
         this.state.tooltip.element.style.display = "none"
+        this.printState()
       }
 
       segmentDragstartHandler(e) {
@@ -491,7 +618,6 @@
         this.selectedSeg = this.selectedSeg = this.state.segments.find(s => {
           return s.element === e.target
         })
-        console.log(this.selectedSeg)
       }
 
       segmentDragentertHandler(e) {
@@ -499,7 +625,6 @@
         this.draggedOver = this.state.segments.find(s => {
           return s.element === e.target
         })
-        console.log('this.draggenter', this.draggedOver, this.selectedSeg)
         if (this.draggedOver.element !== this.selectedSeg.element) {
           this.draggedOver.element.style.borderBottom = 'black 3px solid'
         }
@@ -528,13 +653,79 @@
           this.state.segments[indexDraggedover] = this.selectedSeg
           this.clearBar()
           this.drawBar()
-          this.distributeValues()
+          this.distributeLinearValues()
+          if (this.state.linearValues) {
+            this.clearValuesBar()
+            this.drawValuesBar()
+          }
         }
         this.draggedOver = null
         this.selectedSeg = null
       }
 
       // *************************** Divider Handlers *************************** \\
+
+      valueDividerMousedownHandler(e) {
+        e.preventDefault()
+        this.selectedDivider = e.target.parentNode;
+
+        // Get the current mouse position
+        this.x = e.clientX;
+        this.leftWidth = this.selectedDivider.left.getBoundingClientRect().width;
+        this.rightWidth = this.selectedDivider.right.getBoundingClientRect().width;
+
+        // this.selectedDivider.style.cursor = "col-resize";
+        document.body.style.cursor = "ew-resize";
+
+        this.selectedDivider.left.style.userSelect = "none";
+        // this.selectedDivider.left.element.style.pointerEvents = "none"; // removed onclickhanlder
+
+        this.selectedDivider.right.style.userSelect = "none";
+
+        // Attach the listeners to `document`
+        document.addEventListener("mousemove", this.valueDividerMousemoveHandler);
+        document.addEventListener("mouseup", this.valueDividerMouseupHandler);
+      };
+
+      valueDividerMousemoveHandler(e) {
+        e.preventDefault()
+        // How far the mouse has been moved
+        const dx = e.clientX - this.x;
+        const newLeftWidth =
+          ((this.leftWidth + dx) * 100) /
+          this.valuesBar.getBoundingClientRect().width;
+        this.selectedDivider.left.style.width = `${newLeftWidth}%`;
+
+        const newRightWidth =
+          ((this.rightWidth - dx) * 100) / // +2 because of width of dividers
+          this.valuesBar.getBoundingClientRect().width;
+        this.selectedDivider.right.style.width = `${newRightWidth}%`;
+      }
+
+      valueDividerMouseupHandler() {
+        document.body.style.removeProperty("cursor");
+
+        // Remove the handlers of `mousemove` and `mouseup`
+        this.state.linearValues && this.toggleLinearClickHandler()
+        this.distributeCustomValues()
+        console.log(this.state.segments)
+
+        this.leftWidth = 0
+        this.rightWidth = 0
+        this.x = 0
+        this.selectedDivider = null
+
+        document.removeEventListener("mousemove", this.valueDividerMousemoveHandler);
+        document.removeEventListener("mouseup", this.valueDividerMouseupHandler);
+        let totalWidthPercent = 0
+        let totalWidthPixels = 0
+
+        this.valueSegments.forEach(seg => {
+          totalWidthPixels += seg.getBoundingClientRect().width
+          totalWidthPercent += parseFloat(seg.style.width)
+        })
+        this.printState()
+      };
 
       dividerMousedownHandler(e) {
         e.preventDefault()
@@ -545,11 +736,9 @@
         this.leftWidth = this.selectedDivider.left.element.getBoundingClientRect().width;
         this.rightWidth = this.selectedDivider.right.element.getBoundingClientRect().width;
 
-        // this.selectedDivider.style.cursor = "col-resize";
         document.body.style.cursor = "ew-resize";
 
         this.selectedDivider.left.element.style.userSelect = "none";
-        // this.selectedDivider.left.element.style.pointerEvents = "none"; // removed onclickhanlder
 
         this.selectedDivider.right.element.style.userSelect = "none";
 
@@ -602,32 +791,78 @@
         this.x = 0
         this.selectedDivider = null
 
-        this.distributeValues()
+        this.distributeLinearValues()
 
         document.removeEventListener("mousemove", this.dividerMousemoveHandler);
         document.removeEventListener("mouseup", this.dividerMouseupHandler);
-        console.log(this.state.segments)
         let totalWidthPercent = 0
         let totalWidthPixels = 0
         this.state.segments.forEach(seg => {
           totalWidthPixels += seg.element.getBoundingClientRect().width
           totalWidthPercent += parseFloat(seg.element.style.width)
         })
-        // console.log({
-        //   totalWidthPercent,
-        //   widthPixelsDiff: this.parent.getBoundingClientRect().width - totalWidthPixels
-        // })
+        if (this.state.linearValues) {
+          this.clearValuesBar()
+          this.drawValuesBar()
+        }
+        this.printState()
+        console.log(this.state.segments, this.valueSegments)
+
       };
+
+      // *************************** LinearToggle Methods *************************** \\
+
+      initToggleLinear() {
+        const toggleBtn = document.querySelector('.toggle-linear')
+        toggleBtn.addEventListener('click', this.toggleLinearClickHandler)
+        this.setLinearToggleInnertext()
+      }
+
+      setLinearToggleInnertext(clicked) {
+        const toggleBtn = document.querySelector('.toggle-linear')
+        if (this.state.linearValues) {
+          toggleBtn.innerText = "Linear"
+          this.distributeLinearValues()
+          if (clicked) {
+            this.clearValuesBar()
+            this.drawValuesBar()
+          }
+        } else {
+          toggleBtn.innerText = "Custom"
+        }
+      }
+
+      toggleLinearClickHandler(e) {
+        this.state.linearValues = !this.state.linearValues
+        this.setLinearToggleInnertext(true)
+      }
+
+      // *************************** Print Methods *************************** \\
+
+      initPrintable() {
+        document.querySelector('.printButton').addEventListener('click', this.printState)
+        this.printState()
+      }
+
+      printState() {
+        const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
+        document.querySelector('#print').innerText = JSON.stringify(printableState, null, 1)
+      }
 
       // *************************** Utility Methods *************************** \\
 
       getTotalWidthPercent(index = this.state.segments.length) {
         let totalWidthPercent = 0
-        // this.state.segments.forEach(seg => {
-        //   totalWidthPercent += parseFloat(seg.element.style.width)
-        // })
         for (let i = 0; i < index; i++) {
           totalWidthPercent += parseFloat(this.state.segments[i].width)
+        }
+        return totalWidthPercent
+      }
+
+      getTotalWidthPercentValues(index = this.valueSegments.length) {
+        let totalWidthPercent = 0
+        for (let i = 0; i < index; i++) {
+          totalWidthPercent += parseFloat(this.valueSegments[i].style.width)
         }
         return totalWidthPercent
       }
@@ -646,21 +881,17 @@
         this.segmentDropHandler = this.segmentDropHandler.bind(this)
         this.tooltipCloseHandler = this.tooltipCloseHandler.bind(this)
         this.tooltipOpenHandler = this.tooltipOpenHandler.bind(this)
-        this.distributeValues = this.distributeValues.bind(this)
+        this.distributeLinearValues = this.distributeLinearValues.bind(this)
+        this.initToggleLinear = this.initToggleLinear.bind(this)
+        this.toggleLinearClickHandler = this.toggleLinearClickHandler.bind(this)
+        this.drawValuesBar = this.drawValuesBar.bind(this)
+        this.valueDividerMousedownHandler = this.valueDividerMousedownHandler.bind(this)
+        this.valueDividerMousemoveHandler = this.valueDividerMousemoveHandler.bind(this)
+        this.valueDividerMouseupHandler = this.valueDividerMouseupHandler.bind(this)
+        this.distributeCustomValues = this.distributeCustomValues.bind(this)
+        this.initPrintable = this.initPrintable.bind(this)
+        this.printState = this.printState.bind(this)
       }
-
-      // createDivider(left = null, right = null) { return { left, right } };
-
-      // createSegement(
-      //   left = null,
-      //   right = null,
-      //   color = null,
-      //   width = null
-      // ) {
-      //   return {
-      //     left, right, color, width
-      //   }
-      // };
     }
     const bar = new BarMaker()
 
