@@ -180,6 +180,8 @@
   <pre id="print">
 
   </pre>
+  <mobile-bar></mobile-bar>
+  
   <script>
     class BarMaker {
       constructor(initialState) {
@@ -212,13 +214,15 @@
         this.selectedDivider = null
         this.leftWidth = 0
         this.rightWidth = 0
+        this.printableState = {}
         this.bindHandlers = this.bindHandlers.bind(this)
         this.bindHandlers()
-        this.initBar(initialState);
+        this.initBar(initialState)
         this.initTooltip()
         this.initToggleLinear()
         this.initValuesBar()
         this.initPrintable()
+        this.adjustExampleBar()
       }
 
       initBar(initialState = {}) {
@@ -272,6 +276,7 @@
         this.drawBar()
         this.distributeLinearValues()
         this.parent.appendChild(this.bar)
+        this.testExampleBar()
       }
 
       drawBar() {
@@ -807,7 +812,6 @@
         }
         this.printState()
         console.log(this.state.segments, this.valueSegments)
-
       };
 
       // *************************** LinearToggle Methods *************************** \\
@@ -846,10 +850,33 @@
 
       printState() {
         const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
+        this.printableState = printableState
         document.querySelector('#print').innerText = JSON.stringify(printableState, null, 1)
       }
 
       // *************************** Utility Methods *************************** \\
+
+      adjustExampleBar(){
+        const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
+        const exampleBar = document.querySelector('mobile-bar')
+        console.log({printableState:this.printableState})
+        exampleBar.setAttribute('bardata', JSON.stringify(this.printableState))
+      }
+
+      testExampleBar(){
+        const testData = ['300, 400, 500, 600, 700, 800, 850']
+        const exampleBar = document.querySelector('mobile-bar')
+        exampleBar.setAttribute('score', testData[2])
+        // for(let i = 0; i < testData.length; i++){
+        //   const printInterval = ()=>{
+        //     if(i)
+        //     setTimeout(()=>{
+        //       exampleBar.setAttribute("score", testData[i])
+        //       console.log(testData[i])
+        //     }, 1500)
+        //   }
+        // }
+      }
 
       getTotalWidthPercent(index = this.state.segments.length) {
         let totalWidthPercent = 0
@@ -891,11 +918,13 @@
         this.distributeCustomValues = this.distributeCustomValues.bind(this)
         this.initPrintable = this.initPrintable.bind(this)
         this.printState = this.printState.bind(this)
+        this.adjustExampleBar = this.adjustExampleBar.bind(this)
       }
     }
     const bar = new BarMaker()
 
   </script>
+  <script src="mobile-bar.js"></script>
 </body>
 
 </html>
