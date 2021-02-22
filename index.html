@@ -180,6 +180,8 @@
   <pre id="print">
 
   </pre>
+
+  <button class="run-test">TEST</button>
   <mobile-bar></mobile-bar>
   
   <script>
@@ -223,6 +225,7 @@
         this.initValuesBar()
         this.initPrintable()
         this.adjustExampleBar()
+        this.initTesting()
       }
 
       initBar(initialState = {}) {
@@ -849,33 +852,43 @@
       }
 
       printState() {
-        const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
-        this.printableState = printableState
-        document.querySelector('#print').innerText = JSON.stringify(printableState, null, 1)
+        // const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
+        // this.printableState = this.getPrintableState()
+        document.querySelector('#print').innerText = JSON.stringify(this.getPrintableState(), null, 1)
+        this.adjustExampleBar()
       }
 
       // *************************** Utility Methods *************************** \\
 
+      initTesting(){
+        const testButton = document.querySelector('button.run-test')
+        console.log({testButton}, '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+        testButton.addEventListener('click', this.testExampleBar)
+      }
+
       adjustExampleBar(){
-        const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
+        // const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
         const exampleBar = document.querySelector('mobile-bar')
-        console.log({printableState:this.printableState})
-        exampleBar.setAttribute('bardata', JSON.stringify(this.printableState))
+        console.log({printableState:this.getPrintableState()})
+        exampleBar.setAttribute('bardata', JSON.stringify(this.getPrintableState()))
+      }
+
+      getPrintableState(){
+        return this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin, innerText }) => ({ width, backgroundColor, valueEnd, valueBegin, innerText }))
       }
 
       testExampleBar(){
-        const testData = ['300, 400, 500, 600, 700, 800, 850']
+        const testData = ['300', '400', '500', '600', '700', '800', '850', '483', '666']
         const exampleBar = document.querySelector('mobile-bar')
-        exampleBar.setAttribute('score', testData[2])
-        // for(let i = 0; i < testData.length; i++){
-        //   const printInterval = ()=>{
-        //     if(i)
-        //     setTimeout(()=>{
-        //       exampleBar.setAttribute("score", testData[i])
-        //       console.log(testData[i])
-        //     }, 1500)
-        //   }
-        // }
+        console.log({exampleBar},'&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
+        for(let i = 0; i < testData.length; i++){
+          // console.log(i)
+          setTimeout(()=>{
+            
+            exampleBar.setAttribute('score', testData[i])
+
+         }, (i * 1500))
+        }
       }
 
       getTotalWidthPercent(index = this.state.segments.length) {
@@ -919,6 +932,7 @@
         this.initPrintable = this.initPrintable.bind(this)
         this.printState = this.printState.bind(this)
         this.adjustExampleBar = this.adjustExampleBar.bind(this)
+        // this.initTesting = this.initTesting.bind(this)
       }
     }
     const bar = new BarMaker()

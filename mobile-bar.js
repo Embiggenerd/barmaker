@@ -5,23 +5,26 @@
       super();
       // Attach a shadow root to the element.
       this.shadow = this.attachShadow({ mode: 'open' });
+    this.bar = []
       this.render()
     }
     
     attributeChangedCallback(name, oldValue, newValue){
         switch (name) {
             case 'bardata':
-                this.data = JSON.parse(newValue)
-                this.buildBar(this.data)
+                this.bar = JSON.parse(newValue)
+                this.clearBar()
+                this.buildBar()
                 break
             case 'score':
-                this.score = newValue
-                this.render()
+                console.log('screochanged', newValue)
+
+                this.showScore()
         }
     }
 
     static get observedAttributes() {
-        return ['bardata'];
+        return ['bardata', 'score'];
     }
 
     get bardata() {
@@ -30,6 +33,17 @@
 
     set bardata(data){
         this.setAttribute('bardata', data)
+    }
+
+    get score() {        
+        return this.getAttribute('score')
+    }
+
+    set score(score){
+        this.setAttribute('score', score)
+        console.log('screoset*******************************************', score)
+        // this.score = newValue
+        // this.showScore()
     }
  
     render(){
@@ -95,30 +109,6 @@
                 text-transform: uppercase;
                 }
 
-                .custom-score-bar.very-bad .score-level {
-                color: #D3334F;
-                }
-
-                .custom-score-bar.bad .score-level {
-                color: #F53758;
-                }
-
-                .custom-score-bar.fair .score-level {
-                color: #F5A724;
-                }
-
-                .custom-score-bar.good .score-level {
-                color: #F1C531;
-                }
-
-                .custom-score-bar.excellent .score-level {
-                color: #27D381;
-                }
-
-                .custom-score-bar.best .score-level {
-                color: #24956A;
-                }
-
                 .custom-score-bar .bar {
                 position: relative;
                 height: 12px;
@@ -172,33 +162,10 @@
                 transform: translateX(-50%);
                 }
 
-                .custom-score-bar.very-bad .cursor {
-                background-color: #D3334F;
-                }
-
-                .custom-score-bar.bad .cursor {
-                background-color: #F53758;
-                }
-
-                .custom-score-bar.fair .cursor {
-                background-color: #F5A724;
-                }
-
-                .custom-score-bar.good .cursor {
-                background-color: #F1C531;
-                }
-
-                .custom-score-bar.excellent .cursor {
-                background-color: #27D381;
-                }
-                .custom-score-bar.best .cursor {
-                background-color: #24956A;
-                }
-
-                .custom-score-bar .score-milestones {
-                display: flex;
-                justify-content: space-between;
-                }
+                // .custom-score-bar .score-milestones {
+                // display: flex;
+                // justify-content: space-between;
+                // }
 
                 .custom-score-bar .score-milestone {
                 margin-top: 6px;
@@ -217,12 +184,22 @@
                 font-size: 14px;
                 }
 
+                .bar {
+                    position:relative;
+                }
+
+                .milestone {
+                    color: #6B6C6F;
+                    font-size: 12px;
+                    position:absolute;
+                }
+
             </style>
 
             <div class="left-panel display-block-mobile" data-array-ref="scoreBarParent"><div class="custom-score-bar good" data-array-class-variable="class" data-last-class-variable="good">
                 <div class="above">
                     <div class="score-area">
-                    <h3 class="score" data-array-variable="score">691</h3>
+                    <h3 class="score" data-array-variable="score">${this.score}</h3>
                     <!--      <div class="score-change down">21</div>-->
                     </div>
                     <div class="score-level" data-array-variable="rating">good</div>
@@ -231,38 +208,100 @@
                 <div class="bar">
                 </div>
 
-                <div class="score-milestones">
-                    <div class="score-milestone score-min">300</div>
-                    <div class="score-milestone score-fair">560</div>
-                    <div class="score-milestone score-good">750</div>
-                    <div class="score-milestone score-max">850</div>
-                </div>
-
                 <div class="brand">Vantage Score 3.0</div>
                 </div>
             </div>`
         this.shadow.appendChild(template.content.cloneNode(true));
     }
 
-    buildBar(data){
+    buildBar(){
         const bar = this.shadow.querySelector('div.bar')
         console.log({bar})
-        for(let i = 0; i < data.length; i++){
+        for(let i = 0; i < this.bar.length; i++){
             const segment = document.createElement('div')
-            segment.style.backgroundColor = this.data[i].backgroundColor
+            segment.style.backgroundColor = this.bar[i].backgroundColor
             console.log({
-                'this.data[i].backgroundColor': this.data[i].backgroundColor
+                'this.bar[i].backgroundColor': this.bar[i].backgroundColor
             })
-            segment.style.width = `${this.data[i].width}%`
+            segment.style.width = `${this.bar[i].width}%`
             segment.classList.add('level')
             bar.appendChild(segment)
         }
+        const cursorFound = this.shadow.querySelector('div.cursor')
+    
+        console.log({cursorFound})
+        if(cursorFound){
+            cursorFound.remove()
+        }
         const cursor = document.createElement('div')
         cursor.classList.add('cursor')
-        cursor.style.left = '50%'
-        // this.render()
+        cursor.backgroundColor = 'transparent'
+        cursor.style.left = `${this.getCursorPercent()}%`
+        bar.appendChild(cursor)
     }
 
+    clearBar(){
+        const segments = this.shadow.querySelectorAll('div.level')
+        segments.forEach(s => s.remove())
+    }
+
+    showScore(){
+        const scoreText = this.shadow.querySelector('[data-array-variable="score"]')
+        const cursor = this.shadow.querySelector('div.cursor')
+        scoreText.innerText = this.score
+        cursor.style.left = `${this.getCursorPercent()}%`
+        const scoreLevel = this.shadow.querySelector('.score-level')
+        const {level, color} = this.getScoreLevel()
+        scoreLevel.innerText = level
+        scoreLevel.style.color=color
+        console.log({level, color})
+    }
+
+    getCursorPercent(){
+        let totalPercent = 0
+        const floatScore = parseFloat(this.score)
+        for(let i = 0; i < this.bar.length; i++){
+            if(floatScore >= this.bar[i].valueBegin && floatScore <= this.bar[i].valueEnd){
+                const segmentPercent = floatScore - this.bar[i].valueBegin
+                const lala = segmentPercent / (this.bar[i].valueEnd - this.bar[i].valueBegin)
+                console.log({lala, segmentPercent, floatScore, totalPercent})
+                totalPercent+= (lala * 100) * (this.bar[i].width/100)
+                break
+            }
+            totalPercent+= this.bar[i].width
+        }
+        return totalPercent
+    }
+
+    getScoreLevel(){
+        const scoreLevel = {
+            level:"",
+            color:""
+        }
+        const floatScore = parseFloat(this.score)
+        for(let i = 0; i < this.bar.length; i++){
+            if(floatScore >= this.bar[i].valueBegin && floatScore <= this.bar[i].valueEnd){
+                scoreLevel.level = this.bar[i].innerText
+                scoreLevel.color = this.bar[i].backgroundColor
+
+                break
+            }
+        }
+        return scoreLevel
+    }
+
+    makeMilestones(){
+        const mileStones = this.shadow.querySelectorAll('.milestone')
+        mileStones.forEach(m => m.remove())
+        const bar = this.shadow.querySelector('div.bar')
+        for(let i = 0; i < this.bar.length; i++){
+            if(floatScore >= this.bar[i].valueBegin && floatScore <= this.bar[i].valueEnd){
+                scoreLevel.level = this.bar[i].innerText
+                scoreLevel.color = this.bar[i].backgroundColor
+                break
+            }
+        }
+    }
     
   });
 })();
