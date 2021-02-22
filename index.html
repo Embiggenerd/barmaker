@@ -137,6 +137,10 @@
       border-radius: 2px;
       border: 1px blue solid
     }
+
+    .test-values {
+
+    }
   </style>
 </head>
 
@@ -181,6 +185,11 @@
 
   </pre>
 
+  <input
+    type="text"
+    id="test-values"
+    size="50"
+  >
   <button class="run-test">TEST</button>
   <mobile-bar></mobile-bar>
   
@@ -224,8 +233,8 @@
         this.initToggleLinear()
         this.initValuesBar()
         this.initPrintable()
-        this.adjustExampleBar()
         this.initTesting()
+        this.adjustExampleBar()
       }
 
       initBar(initialState = {}) {
@@ -273,13 +282,13 @@
 
         this.parent = document.querySelector(`#${this.state.parentID}`)
         this.bar = document.createElement('div')
+        this.testData = []
         this.bar.style.display = "flex"
         this.bar.style.height = `${this.state.bar.height}px`
         this.bar.style.position = "relative"
         this.drawBar()
         this.distributeLinearValues()
         this.parent.appendChild(this.bar)
-        this.testExampleBar()
       }
 
       drawBar() {
@@ -861,13 +870,23 @@
       // *************************** Utility Methods *************************** \\
 
       initTesting(){
+        this.testData = ['300', '400', '500', '600', '700', '800', '850', '483', '666']
+        const printableTestData = this.testData.join(" ")
+        const testInput = document.querySelector('input#test-values')
+        testInput.setAttribute('value', printableTestData)
+
+        testInput.addEventListener('change', (e)=>{
+          const splitValues = e.target.value.trim().split(" ")
+          this.testData = splitValues
+        })
+        
         const testButton = document.querySelector('button.run-test')
         console.log({testButton}, '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
         testButton.addEventListener('click', this.testExampleBar)
+        this.testExampleBar()
       }
 
       adjustExampleBar(){
-        // const printableState = this.state.segments.map(({ width, backgroundColor, valueEnd, valueBegin }) => ({ width, backgroundColor, valueEnd, valueBegin }))
         const exampleBar = document.querySelector('mobile-bar')
         console.log({printableState:this.getPrintableState()})
         exampleBar.setAttribute('bardata', JSON.stringify(this.getPrintableState()))
@@ -878,16 +897,16 @@
       }
 
       testExampleBar(){
-        const testData = ['300', '400', '500', '600', '700', '800', '850', '483', '666']
+        // const testData = ['300', '400', '500', '600', '700', '800', '850', '483', '666']
         const exampleBar = document.querySelector('mobile-bar')
-        console.log({exampleBar},'&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
-        for(let i = 0; i < testData.length; i++){
+        console.log(this.testData,'&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
+        for(let i = 0; i < this.testData.length; i++){
           // console.log(i)
           setTimeout(()=>{
             
-            exampleBar.setAttribute('score', testData[i])
+            exampleBar.setAttribute('score', this.testData[i])
 
-         }, (i * 1500))
+         }, (i * 700))
         }
       }
 
@@ -932,7 +951,8 @@
         this.initPrintable = this.initPrintable.bind(this)
         this.printState = this.printState.bind(this)
         this.adjustExampleBar = this.adjustExampleBar.bind(this)
-        // this.initTesting = this.initTesting.bind(this)
+        this.initTesting = this.initTesting.bind(this)
+        this.testExampleBar = this.testExampleBar.bind(this)
       }
     }
     const bar = new BarMaker()
